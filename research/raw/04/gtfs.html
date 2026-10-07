@@ -1,0 +1,530 @@
+
+<!DOCTYPE HTML>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="/static/img/favicon.png">
+
+    <title>Open Transit Data | Delhi</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="/static/css/bootstrap.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="/static/css/product.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-multiselect.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal1" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title" id="exampleModalLabel">Kindly state purpose of downloading this
+                        resource.</h6>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="/data/staticDMRC/">
+                        <input type='hidden' name='csrfmiddlewaretoken' value='1Ben4H5PriZ438cnOY4NllyfpX1IWXlpgDlAnp764Gh4cQq1pZPHgybMhjyN6YSc'>
+                        <input type='hidden' name='dataDownloaded' value='stops'>
+                        <div class="form-group">
+                            <label for="usageType" style="margin-right: 20px"><b>Usage Type*</b></label><br/>
+                            <input type="radio" value="Commercial" name="usageType">
+                            <label for="usageType" style="margin-right: 20px">Commercial</label>
+                            <input type="radio" value="NonCommercial" name="usageType">
+                            <label for="usageType">Non-Commercial</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="purpose"><b>Purpose*</b></label><br/>
+                            <input type="checkbox" name="purpose" value="Academia">
+                            <label for="Academia" style="margin-right: 20px">Academia</label>
+                            <input type="checkbox" name="purpose" value="R&D">
+                            <label>R&D</label><br/>
+                            <input type="checkbox" name="purpose" value="Business">
+                            <label style="margin-right: 20px">Business</label>
+                            <input type="checkbox" name="purpose" value="Journalistic">
+                            <label>Journalistic</label><br/>
+                            <input type="checkbox" name="purpose" value="Govt Use">
+                            <label style="margin-right: 20px">Govt Use</label>
+                            <input type="checkbox" name="purpose" value="Other">
+                            <label>Other</label><br/>
+                        </div>
+                        <div class="form-group">
+                            <input type="name" class="form-control" id="exampleInputname1" aria-describedby="nameHelp"
+                                   placeholder="Name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <input name="email" type="email" class="form-control" placeholder="E-mail" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="checkbox" required="">
+                            By clicking this, you agree to our
+                            <a target="_blank" href="/terms">Terms
+                                and Conditions</a><br/>
+                        </div>
+                        <div style="align-content: center;">
+                            <button type="submit"
+                                    style="margin-left: auto;margin-right: auto; display: block;width: 200px"
+                                    class="btn btn-primary">Submit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal2" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title" id="exampleModalLabel">Kindly state purpose of downloading this
+                        resource.</h6>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="/data/staticDMRC/">
+                        <input type='hidden' name='csrfmiddlewaretoken' value='1Ben4H5PriZ438cnOY4NllyfpX1IWXlpgDlAnp764Gh4cQq1pZPHgybMhjyN6YSc'>
+                        <input type='hidden' name='dataDownloaded' value='routes'>
+                        <div class="form-group">
+                            <label for="usageType" style="margin-right: 20px"><b>Usage Type*</b></label><br/>
+                            <input type="radio" value="Commercial" name="usageType">
+                            <label for="usageType" style="margin-right: 20px">Commercial</label>
+                            <input type="radio" value="NonCommercial" name="usageType">
+                            <label for="usageType">Non-Commercial</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="purpose"><b>Purpose*</b></label><br/>
+                            <input type="checkbox" name="purpose" value="Academia">
+                            <label for="Academia" style="margin-right: 20px">Academia</label>
+                            <input type="checkbox" name="purpose" value="R&D">
+                            <label>R&D</label><br/>
+                            <input type="checkbox" name="purpose" value="Business">
+                            <label style="margin-right: 20px">Business</label>
+                            <input type="checkbox" name="purpose" value="Journalistic">
+                            <label>Journalistic</label><br/>
+                            <input type="checkbox" name="purpose" value="Govt Use">
+                            <label style="margin-right: 20px">Govt Use</label>
+                            <input type="checkbox" name="purpose" value="Other">
+                            <label>Other</label><br/>
+                        </div>
+                        <div class="form-group">
+                            <input type="name" class="form-control" id="exampleInputname1" aria-describedby="nameHelp"
+                                   placeholder="Name" name="name">
+                        </div>
+                        <div class="form-group">
+                            <input name="email" type="email" class="form-control" placeholder="E-mail">
+                        </div>
+                        <div class="form-group">
+                            <input type="checkbox" required="">
+                            By clicking this, you agree to our
+                            <a target="_blank" href="/terms">Terms
+                                and Conditions</a><br/>
+                        </div>
+                        <div style="align-content: center;">
+                            <button type="submit"
+                                    style="margin-left: auto;margin-right: auto; display: block;width: 200px"
+                                    class="btn btn-primary">Submit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal3" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title" id="exampleModalLabel">Kindly state purpose of downloading this
+                        resource.</h6>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="/data/staticDMRC/">
+                        <input type='hidden' name='csrfmiddlewaretoken' value='1Ben4H5PriZ438cnOY4NllyfpX1IWXlpgDlAnp764Gh4cQq1pZPHgybMhjyN6YSc'>
+                        <input type='hidden' name='dataDownloaded' value='stop_times'>
+                        <div class="form-group">
+                            <label for="usageType" style="margin-right: 20px"><b>Usage Type*</b></label><br/>
+                            <input type="radio" value="Commercial" name="usageType">
+                            <label for="usageType" style="margin-right: 20px">Commercial</label>
+                            <input type="radio" value="NonCommercial" name="usageType">
+                            <label for="usageType">Non-Commercial</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="purpose"><b>Purpose*</b></label><br/>
+                            <input type="checkbox" name="purpose" value="Academia">
+                            <label for="Academia" style="margin-right: 20px">Academia</label>
+                            <input type="checkbox" name="purpose" value="R&D">
+                            <label>R&D</label><br/>
+                            <input type="checkbox" name="purpose" value="Business">
+                            <label style="margin-right: 20px">Business</label>
+                            <input type="checkbox" name="purpose" value="Journalistic">
+                            <label>Journalistic</label><br/>
+                            <input type="checkbox" name="purpose" value="Govt Use">
+                            <label style="margin-right: 20px">Govt Use</label>
+                            <input type="checkbox" name="purpose" value="Other">
+                            <label>Other</label><br/>
+                        </div>
+                        <div class="form-group">
+                            <input type="name" class="form-control" id="exampleInputname1" aria-describedby="nameHelp"
+                                   placeholder="Name" name="name">
+                        </div>
+                        <div class="form-group">
+                            <input name="email" type="email" class="form-control" placeholder="E-mail">
+                        </div>
+                        <div class="form-group">
+                            <input type="checkbox" required="">
+                            By clicking this, you agree to our
+                            <a target="_blank" href="/terms">Terms
+                                and Conditions</a><br/>
+                        </div>
+                        <div style="align-content: center;">
+                            <button type="submit"
+                                    style="margin-left: auto;margin-right: auto; display: block;width: 200px"
+                                    class="btn btn-primary">Submit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="exampleModal4" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title" id="exampleModalLabel">Kindly state purpose of downloading this
+                        resource.</h6>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" action="/data/staticDMRC/">
+                        <input type='hidden' name='csrfmiddlewaretoken' value='1Ben4H5PriZ438cnOY4NllyfpX1IWXlpgDlAnp764Gh4cQq1pZPHgybMhjyN6YSc'>
+                        <input type='hidden' name='dataDownloaded' value='trips'>
+                        <div class="form-group">
+                            <label for="usageType" style="margin-right: 20px"><b>Usage Type*</b></label><br/>
+                            <input type="radio" value="Commercial" name="usageType">
+                            <label for="usageType" style="margin-right: 20px">Commercial</label>
+                            <input type="radio" value="NonCommercial" name="usageType">
+                            <label for="usageType">Non-Commercial</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="purpose"><b>Purpose*</b></label><br/>
+                            <input type="checkbox" name="purpose" value="Academia">
+                            <label for="Academia" style="margin-right: 20px">Academia</label>
+                            <input type="checkbox" name="purpose" value="R&D">
+                            <label>R&D</label><br/>
+                            <input type="checkbox" name="purpose" value="Business">
+                            <label style="margin-right: 20px">Business</label>
+                            <input type="checkbox" name="purpose" value="Journalistic">
+                            <label>Journalistic</label><br/>
+                            <input type="checkbox" name="purpose" value="Govt Use">
+                            <label style="margin-right: 20px">Govt Use</label>
+                            <input type="checkbox" name="purpose" value="Other">
+                            <label>Other</label><br/>
+                        </div>
+                        <div class="form-group">
+                            <input type="name" class="form-control" id="exampleInputname1" aria-describedby="nameHelp"
+                                   placeholder="Name" name="name">
+                        </div>
+                        <div class="form-group">
+                            <input name="email" type="email" class="form-control" placeholder="E-mail">
+                        </div>
+                        <div class="form-group">
+                            <input type="checkbox" required="">
+                            By clicking this, you agree to our
+                            <a target="_blank" href="/terms">Terms
+                                and Conditions</a><br/>
+                        </div>
+                        <div style="align-content: center;">
+                            <button type="submit"
+                                    style="margin-left: auto;margin-right: auto; display: block;width: 200px"
+                                    class="btn btn-primary">Submit
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg sticky-top navbar-dark bg-dark">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarTogglerDemo01"
+            aria-controls="navbarTogglerDemo01" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarTogglerDemo01">
+        <a class="py-2" href="/">
+            <img src="/static/img/white_beta.png" height="30px" style="margin-right: 50px">
+        </a>
+        <ul class="navbar-nav mr-auto mt-2 mt-lg-0">
+            <li class="nav-item ">
+                <a class="nav-link" href="/">Home</a>
+            </li>
+
+            <li class="nav-item active">
+                <a class="nav-link" href="/data/staticDMRC">DMRC Static Data <span class="blinking-dot"></span> </a>
+            </li>
+
+            <li class="nav-item ">
+                <a class="nav-link" href="/data/static">Static Data</a>
+            </li>
+            <li class="nav-item ">
+                <a class="nav-link" href="/data/realtime">Real Time Data</a>
+            </li>
+            <li class="nav-item ">
+                <a class="nav-link" href="/documentation">Documentation</a>
+            </li>
+            <li class="nav-item ">
+                <a class="nav-link" href="/contact">Contact</a>
+            </li>
+            <li class="nav-item ">
+                <a class="nav-link" href="/about">About</a>
+            </li>
+        </ul>
+        <!-- <form class="form-inline my-2 my-lg-0" style="margin-right: 50px">
+          <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+          <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+        </form> -->
+        
+        
+        
+
+    </div>
+</nav>
+
+
+    <div class="container-fluid">
+        <div class="position-relative overflow-hidden p-3 p-md-5 text-left bg-light" style="min-height: 300px">
+            <div class="col-md-12">
+                <div class="col-md-6">
+                    <h1>DMRC Static Data</h1>
+                </div>
+                <div class="col-md-4" style="margin-top: 50px;">
+                    <button data-toggle="modal" data-target="#exampleModal1"
+                            class="btn btn-default download-button dark">Download Data
+                    </button>
+                    <p><i>This will download all the static files as .zip.</i></p>
+                </div>
+            </div>
+
+            <hr/>
+            <div class="d-md-flex flex-md-equal w-100 my-md-3 pl-md-3">
+                <div class="bg-light mr-md-3 pt-3 px-3 pt-md-5 px-md-5 text-center overflow-hidden"
+                     style="margin-bottom: 10px">
+                    <div class="my-3 p-3" style="height: 220px">
+                        <h2 class="display-5">STOPS</h2>
+                        <p class="lead"><i>Count: 262</i><br/>List of all the active metro stations and terminals.</p>
+                    </div>
+
+                    <p class="_p_small"><i>Last Updated: </i>Aug. 10, 2023<br/></p>
+                    <div class="bg-dark shadow-sm mx-auto"
+                         style="width: 80%; height: 250px; border-radius: 21px 21px 0 0;"><img
+                            src="/static/img/busStop1.png" width="80%" style="padding-top: 20%"></div>
+                </div>
+                <div class="bg-dark mr-md-3 pt-3 px-3 pt-md-5 px-md-5 text-center text-white overflow-hidden"
+                     style="margin-bottom: 10px">
+                    <div class="my-3 py-3" style="height: 220px">
+                        <h2 class="display-5">ROUTES</h2>
+                        <p class="lead"><i>Count: 36</i><br/>Information about all the metro routes in Delhi</p>
+                    </div>
+
+
+                    <p class="_p_small"><i>Last Updated: </i>Aug. 10, 2023<br/></p>
+                    <div class="bg-light shadow-sm mx-auto"
+                         style="width: 80%; height: 250px; border-radius: 21px 21px 0 0;"><img
+                            src="/static/img/routes.png" width="80%" style="padding-top: 10%"></div>
+                </div>
+
+                <div class="bg-light mr-md-3 pt-3 px-3 pt-md-5 px-md-5 text-center overflow-hidden"
+                     style="margin-bottom: 10px">
+                    <div class="my-3 p-3" style="height: 220px">
+                        <h2 class="display-5">STOP TIMES</h2>
+                        <p class="lead"><i>Count: 411686</i><br/>Approximate arrival and departure times of metro trains on
+                            stations</p>
+                    </div>
+                    <div class="clearfix"></div>
+
+                    <p class="_p_small"><i>Last Updated: </i>Aug. 10, 2023<br/></p>
+                    <div class="bg-dark shadow-sm mx-auto"
+                         style="width: 80%; height: 250px; border-radius: 21px 21px 0 0;"><img
+                            src="/static/img/time.png" width="80%" style="padding-top: 20%"></div>
+                </div>
+                <div class="bg-dark mr-md-3 pt-3 px-3 pt-md-5 px-md-5 text-center text-white overflow-hidden"
+                     style="margin-bottom: 10px">
+                    <div class="my-3 py-3" style="height: 220px;">
+                        <h2 class="display-5">TRIPS</h2>
+                        <p class="lead"><i>Count: 17997</i><br/>Frequency and schedule of metro routes</p>
+                    </div>
+                    <p class="_p_small"><i>Last Updated: </i>Aug. 10, 2023<br/></p>
+                    <div class="bg-light shadow-sm mx-auto"
+                         style="width: 80%; height: 250px; border-radius: 21px 21px 0 0;"><img
+                            src="/static/img/trips.png" width="100%" style="padding-top: 20%"></div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+
+
+
+<footer class="container py-5" style="margin-bottom: 0px">
+    <div class="row">
+        <div class="col-6 col-md">
+            <h5>Data</h5>
+            <ul class="list-unstyled text-small">
+                <li><a class="text-muted" href="/documentation">Documentation</a></li>
+                <li><a class="text-muted" href="/data/staticDMRC">DMRC Static Data</a></li>
+                <li><a class="text-muted" href="/data/static">Static Data</a></li>
+                <li><a class="text-muted" href="/data/realtime">Real Time Data</a></li>
+            </ul>
+        </div>
+        <div class="col-6 col-md">
+            <h5>About</h5>
+            <ul class="list-unstyled text-small">
+                <li><a class="text-muted" target="_blank"
+                       href="http://traffickarma.iiitd.edu.in:9010/static/agency.txt">Agency</a></li>
+                <li><a class="text-muted" target="_blank"
+                       href="http://delhi.gov.in/wps/wcm/connect/doit/Delhi+Govt/Delhi+Home">Delhi Government</a></li>
+                <li><a class="text-muted" target="_blank" href="https://iiitd.ac.in/">IIIT-Delhi</a></li>
+            </ul>
+        </div>
+        <div class="col-6 col-md">
+            <h5>Contact</h5>
+            <ul class="list-unstyled text-small">
+                <li><a class="text-muted" href="/announcements">Announcements</a></li>
+                <li><a class="text-muted" href="/contact">Reach Us</a></li>
+            </ul>
+        </div>
+        <div class="col-6 col-md">
+            
+            
+            <a target="_blank" href="https://www.delhimetrorail.com/">
+                <img class="dimts_logo" src="/static/img/dmrc.svg"
+                     style="margin-left: auto;margin-right: auto; display: block;height: 50px;">
+            </a>
+            <a target="_blank" href="https://iiitd.ac.in/"><img src="/static/img/iiitdlogo.png"
+                                                                width="100%"/></a>
+        </div>
+        <div class="col-6 col-md">
+            <div style="align-content: center;">
+                <a target="_blank" href="http://delhi.gov.in/wps/wcm/connect/DOIT_DTC/dtc/home">
+                    <img src="/static/img/dtc.png" width="80%"
+                         style="margin-left: auto;margin-right: auto; display: block;">
+                </a>
+            </div>
+            <div style="align-content: center;">
+                <a target="_blank" href="https://www.dimts.in/">
+                    <img class="dimts_logo" src="/static/img/dimts.jpg"
+                         style="margin-left: auto;margin-right: auto; display: block;">
+                </a>
+            </div>
+        </div>
+
+
+
+
+
+
+
+
+    </div>
+</footer>
+<footer class="container" style="padding-top: 0;margin-bottom: 0px">
+    <div class="row" style="align-items: center;">
+        <a class="text-muted" href="/terms">Terms and Conditions</a>
+    </div>
+</footer>
+<footer class="container" style="padding-top: 0">
+    <div class="row" style="align-items: center;">
+        <small class="d-block text-muted" style="float: right;">© 2017-2023</small>
+        <br/>
+    </div>
+
+</footer>
+
+<footer class="container" style="padding-top: 0">
+    <div class="row" style="align-items: center;">
+        <small class="d-block text-muted" style="float: right;">This site works well on all modern browsers (Chrome,
+            Firefox, Safari)</small>
+        <br/>
+    </div>
+
+</footer>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+
+<script src="/static/js/popper.min.js"></script>
+<script src="/static/js/bootstrap.min.js"></script>
+<script src="/static/js/bootstrap-multiselect.js"></script>
+<script>
+    Holder.addTheme('thumb', {
+        bg: '#55595c',
+        fg: '#eceeef',
+        text: 'Thumbnail'
+    });
+</script>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-128216091-1"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'UA-128216091-1');
+
+    function forceDownload(href) {
+        var anchor = document.createElement('a');
+        anchor.href = href;
+        anchor.download = href;
+        anchor.target = '_blank'
+        document.body.appendChild(anchor);
+        anchor.click();
+    }
+
+    $(document).ready(function () {
+        $('.multiselect').multiselect();
+    });
+</script>
+
+
+</body>
+</html>

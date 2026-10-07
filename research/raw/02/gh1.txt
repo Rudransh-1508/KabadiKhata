@@ -1,0 +1,25 @@
+### SIH winner
+Aadiii00/SIH-Winners-PPt-and-Sources | 263 | 
+drajashe/sih2k18 | 17 | 🦄Winner:  Smart India Hackathon 2018 🌷 
+sanjaytharagesh31/Hackathon-Ayurveda | 29 | Winner at SIH 2019 / Conversion of ancient Ayurvedic units to modern scientific measures. Funded AICTE project from the Ministry of AYUSH
+yatendra2001/Tevo-SIH-2022-Winner | 8 | Tevo is a social networking mobile application that allow users to share their everyday progress on health, career or any personal interests.
+Girlscript-Deheradun/Web-Development | 3 | 2 days hands on training with how and where to start web development and complete Node.js as well Open source with SIH winner 2020 and Mozilla Chandigarh Lead . Event by Girlscript Deheradun
+Rajneesh2002/WorkDayIndia | 0 | this is sih 2024 winners
+Hyperion101010/monitor-water | 3 | A water usage management tool prototyped for Ministry of Water Resource(India) during SIH 2019. This project was decleared winner for CGWA category during SIH Finals.
+Samyak-57/SIH_winner | 4 | We are going to win this SIH!
+adityap02/Smart-India-Hackathon-2019 | 8 | sih 2019 winner project | Rural Healthcare Portal | Problem statement AS2
+aryanmaurya1/Naari_AS122_CodeMagicians_SIH-2020 | 3 | SIH 2020 Grand Finale Winner Project
+### hackathon winner AQI
+HackYourWayHackathon/Airometer | 4 | Airometer is an AQI app that was built for and Winner of 3rd place at 'Hack Your Way' hackathon organized by IIC TMSL!
+GyaneshSamanta/Dataday-Grind-III | 0 | MLH Dataday Grind III winner: AQI analysis comparing India's air quality pre- and post-COVID across cities.
+### winner waste segregation hackathon
+### winning project flood prediction hackathon
+Stephen-Echessa/WeatherPredictor-EarthAIHackathon | 1 | This project, born out of a winning entry in a hackathon focused on climate impact, employs AI to predict weather patterns, specifically distinguishing between floods and droughts, and recommends ways pastoralists can sustain their livelihoods given the predictions.
+### smart india hackathon 2024 winner
+KrupaliGadhavi/smart-india-hackathon-dashboard | 0 | Power BI dashboard for DRDO document verification system – SIH 2024 Winner
+Shhriyash/Dak-Madad | 3 | AI postal address system that extracts, validates and geocodes handwritten addresses, then generates optimized delivery routes. Smart India Hackathon 2024 winner, Ministry of Communications.
+GauravVKulkarni/Doclens-Frontend | 0 | Prototype frontend for automated applicant data verification at RAC, DRDO. Demonstrated at Smart India Hackathon 2024 (Winner project)
+tilakn21/DakMadad | 0 | AI platform for India Post — address extraction, correction, QR generation and delivery routing (EICGO). Smart India Hackathon 2024 winner · published at IEEE CVMI 2025.
+monishamaheshkumar2004/herbalhub | 1 | Virtual Herbal Garden App developed for Smart India Hackathon 2024 — an interactive AYUSH platform featuring 3D medicinal plant models, multimedia content, and smooth navigation. 🏆 National Winner | Project successfully handed over to the Government of India.
+sumer-pandey/Smart_Drone_Orchard_Aikyam | 0 | Smart India Hackathon 2024 project by Team Aikyam. Designed a smart drone system for apple orchards with DIY multispectral imaging (70–80% cheaper), LoRa communication, ML-based yield prediction & VRT spraying. PDEU round winners, Top 50 nationally. Repo includes 19 docs, CAD, circuits & flowcharts.
+### first prize hackathon e-waste

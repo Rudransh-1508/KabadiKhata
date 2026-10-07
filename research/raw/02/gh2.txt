@@ -1,0 +1,57 @@
+### hackathon winner air pollution
+### hackathon winner waste management
+### hackathon winner e-waste
+### hackathon winner flood
+CodeMaxx/Flood-League | 0 | Ubisoft Game Jam 2017 Winner!
+Jithin-Jude/KeralaFloodEmergencyServiceSystem | 1 | Winner ZealHack'19 hackathon conducted by College of Engineering, Cherthala & ITC INFOTECH
+### hackathon winner waterlogging
+### hackathon winner water conservation
+timothypao/H2O-Baylor-Hackathon | 0 | H2O Conservation app with built in water usage tracker, sustainability advice, and game; 2nd place winner of Baylor Hackathon 2023
+### hackathon winner solar
+makevoid/solether | 5 | IoT project for an autonomous entity solar charger - SolETHer - Blockchain RS Components London IoT hackathon winner
+YassWorks/Solaria | 6 | AI Odyssey Hackathon 2nd Place winner solution. Crowd-financed infrastructure with algorithmic auditing.
+Talhahax/SolarScan | 0 | 🏆 Hackathon Winner | Scan your electricity bill to get instant solar panel recommendations, cost analysis, and ROI calculations. Built with ML Kit OCR and Material Design 3.
+Jordandde/Solar-Charging-Sun-Tracking-Battery | 0 | 🏆ECE department-wide 2019 Hackathon winner. Solar charging battery that tracks the sun's movement to maximize the amount of charge received
+noeljo23/solar-intelligence | 0 | Solis - Cross-Country Solar Market Intelligence Platform. PowerTrust IE 7374 GenAI Hackathon winner (1st place, April 2026). FastAPI + Next.js + RAG over verified policy docs across 10 emerging solar markets.
+jcs98/HawkEye | 1 | Mobile application for analysis of solar energy potential for ISRO - Winner, college qualifier round, Smart India Hackathon 2020
+marianaisaw/Perov | 0 | First Place Hackathon Winner: AI platforms that designs and recommends optimal perovskite solar materials for any region by analyzing energy decomposition, humidity, temperature, and cost
+Leihyn/privacy-chronicles | 0 | Privacy Chronicles: An immersive 3D solar system experience teaching blockchain privacy through interactive storytelling. 5-episode comic series covering zero-knowledge proofs, shielded transactions, and financial privacy. Content Creation Track Winner at Zypherpunk Hackathon.
+### hackathon winner heat island
+### hackathon winner recycling
+tristanduncombe/arch | 5 | ARCH (A Recycling Centre Hub) is a mobile application that helps users find nearby recycling bins and earn rewards for recycling. ARCH was the winner of the 2024 EAIT Sustainability Hackathon! 🏆🎉
+CaRniFeXeR/viennaup23-hackathon-recycling | 1 | Label-efficent object-detection of Recycling objects. Winner of ViennaUp'23 Hackathon
+s-brez/vonex-hackathon-2019 | 2 | An online marketplace addressing the issue of non-recyclable waste. First-prize winner of the 2019 RMIT + Vonex hackathon. 
+jimmyzhng/BinIt | 0 | Winner of RootHacks Hackathon WiCS Award - Web application that uses AI to sort trash based on images uploaded by the user, with the ability to differentiate between waste, recycling, compost, and paper.
+primo14/Toast-Dash-Hackathon | 0 | Winner of the Toast Dash Hackathon 2025. Sustainability focused B2B circular brokerage React web app that connects businesses with companies seeking organic waste for fungi-based recycling. 
+pyxyyy/shehacks | 0 | a smart bin to automatically drop your trash into the correct compartment (trash, recycleable etc). winner of the environmental sustainability category at SheHacks Boston, the largest all-female, non-binary hackathon.
+### hackathon winner stubble burning
+### hackathon winner carbon footprint India
+### hackathon winner EV charging
+### SIH 2023 winner
+pt3002/HexxCode-SIH-2023 | 2 | Smart India Hackathon Winner, Problem Statement - SIH1465, Ministry - AICTE. Unified portal for developing a model curriculum for all the AICTE Approved institutes
+Arjun-254/SIH1348_LichtDenCode | 1 | SIH 2023 Winner -> RailwayBuddy
+utkarshcse2026/SIH2023-PS1288-WINNER | 0 | THIS REPOSITY CONSITS OF ZIPS WHICH WON PS1288 IN SIH2023 HYDERABAD TEAM DIGITAL DRUIDS
+AbhiraajV/sih-2023-winners | 0 | 
+elucidator8918/SIH1348_LichtDenCode | 1 | Winner Solution of Smart India Hackathon 2023
+shivamkapoor172002/SIH2023-WINNER-Internal-Hackathon-Certificate-Team_DAMSYS | 0 | 
+sdmrf/pgrkam-sih-2023 | 0 | 🏆 Smart India Hackathon 2023 Winner — AI job recommendations with AR integration · TypeScript · Node.js · MongoDB
+Ashwin-Baduni/video-based-motion-amplification-and-vibration-analysis-SIH-2023 | 0 | SIH-2023 Winner: Video-Based Motion Amplification and Vibration Analysis for Ministry of Defence
+### SIH 2025 winner
+VishalGhuge111/TelhanSathi-SIH2025 | 6 | SIH 2025 National Winner | Agri-marketplace connecting oilseed farmers with buyers via real-time auction bidding using Flask-SocketIO, AI-driven crop profitability analysis, IoT field monitoring, weather integration, and subsidy discovery. Role-based auth (farmer/buyer/admin), bid management with accept/reject flow. Flask + SQLAlchemy backend.
+Hamenath/hamenath | 4 | Full Stack Developer | SIH 2025 Winner 🏆 | React • Node.js • MongoDB • AI
+Abhishekmishra2808/Bio-line | 0 | SIH winners project 2025
+maanu123hyok/sihhh-frontend | 0 | winner 2025
+Naveenmehta121/TEAM-OUROBONICS---SIH2025-WINNERS | 1 | Kritrim — an indigenous AI-powered humanoid robot integrating computer vision, speech recognition, NLP, and robotic actuation for intelligent human–robot interaction and service automation.
+saralanand2739-bot/SIH-WINNER-2025 | 0 | brewing
+SithickSahilAhamedZ/SIH-2025-WINNERS-MASTER-MIND | 0 | 
+Baksheeshs/ourobonics-kritrim_SIH_2025_Winner | 1 | Kritrim — An affordable, AI-driven multilingual humanoid robot for MSMEs. 🏆 Winner, Smart India Hackathon 2025 | Team Ourobonics, Galgotias University"
+### Google Solution Challenge winner
+phkhanhtrinh23/livel_application | 13 | LIVEL an application on live traveling which helps people travel online and broadcast the journey through the Internet. Winner (TOP 50) of The 2021 Solution Challenge, Google Developers.
+erich-hs/Google-GLDv2-2020 | 1 | Google's Landmark Recognition Challenge 2020. This repository contains my implementation of a metric learning solution with cosine similarity search (using an EfficientNet backbone for image embedding), paired with a DELF module for reranking based on local features of the images. These techniques were adapted from the 2020 Recognition challenge winner and 2019 Recognition challenge 2nd place papers.
+ismummy/Train-Tracker | 2 | Stutern logo white Pricing Internships Account Back Application History Thumb img 20161102 071853 Back View Profile Edit Profile Settings Sign Out Time Left 10 hours and 29 minutes Reward: N50,000 Start Date: Oct 24, 2016 12:00 PM End Date: Nov 06, 2016 11:59 PM Registrants: 33 Submissions: 0  Resources:    Geek Train Tracking App: Android Internship Contest by Connect Rails Submit CHALLENGE Build a native Android Train Tracking App. You may use publicly available APIs to do this such as Firebase, Google Maps, Parse , UBER. To get started, check out the 'Resources' section.  TECHNOLOGY Native Android App (Android Studio and SDK is preferred,) REWARD 3 - 6 months paid internship with a probable full-time opportunity. BACKGROUND This challenge is sponsored by ConnectRail Services.  ConnectRail is a Nigerian rail haulage, infrastructure and logistics support firm with an established working relationship with the Nigerian Railway Corporation, to provide rail freight/haulage and logistic support services to businesses in Nigeria seeking to move goods by rail. We are on a mission to improve rail freight competitiveness by reducing turnaround time and operating cost.   In September 2016, It was all over African news media as it was historic that ConnectRail transported 500 cows from Gusau, Zamfara State of Nigeria over a 1,000 km to Lagos State in a record of 36 hours. Which was hours ahead of the usual schedule. In the light of this, we want an intern to develop a mobile tracking app to monitor our haulage system.   We are eager to see what you can invent. We will award exciting prizes to the best submission. We anticipate solutions that will surprise, delight, and engage with African users in a productive and yet simple way. The winner will receive a cash award of N50,000, a 3 to 6 month paid internship at Connect Rail, an opportunity for full-time employment and other perks.    REWARD N50,000 Cash Award Opportunity to join Connect Rail full time. 24x7 Dedicated Internet and Power. Professional & Career Mentorship  RESOURCES See below links to documentation on publicly available APIs that you may use in building the app: Firebase Google Maps Uber Parse   We may introduce additional resources to mix things up a bit during the challenge period, so make sure to follow us on Twitter: @stutern   APP REQUIRMENTS Through the simple mobile application: Monitoring officers should be able to record the loading, unloading, trip-up and trip-down timelines for haulages. The data provided by all monitoring officer should be fed into a cloud based data bank. The system should be able to generate notifications after each process have being concluded. The admin and client should have a GPS based real time location on Google Maps of the trip. The database can be queried/structured to generate reports and graphs. The system should have a GPS based real time location tracking ability on Google Map for the trips. The system should have the ability to tap into APIs of enterprise systems e.g. SAP We want the UX to be very simple and user-friendly. The fewest number of steps needed to do an action. SUBMISSION INSTRUCTION  Click the registration button at the top of this page. Once registered, you will be redirected back to this page with a submit button. Click the submit button at the top of the page. Submit URL of App Submit URL of your App’s Github repository JUDGING CRITERIA All entries will be judged using the following criteria: Features and functionality Code structure and organization User experience and design Good command of APIs Problem solving methodology Android platform only 100% original work of the developer Clarity in report generation ELIGIBILITY CRITERIA Walk through the Challenge Rules to confirm you meet all eligibility requirements. Register for this competition and follow twitter accounts: @stutern Submit a valid entry before deadline Confirm immediate availability for an “Andriod Developer Intern” role at Connect Rail Services Have no criminal record or pending lawsuit WINNER SELECTION Winners are selected by the client and are chosen solely at the client's discretion. Judges are teams from Connect Rails, Stutern and Andela.   About Stutern © 2016. All Rights Reserved. Privacy Policy | Terms of Use
+### Imagine Cup India
+deveshz/GameSaviour-WWF-FullVersion | 1 | Game Saviour by Team Zephyr from India. 1 of the only two teams from India, to reach to compete in World Wide Finals of Microsoft Imagine Cup (Poland), Game Design. Made with XNA 4.0
+deveshz/GameSaviour-Preliminary | 0 | Imagine Cup 2009 (Poland) Game Design. Preliminary Code with one level of game created where the hero collects the MDG (Millenium Development Goals) from India and then kill the enemies by pushing the MDG brick over them.
+### NASA space apps winner air
+### hackathon 2nd place air quality
+bastidiaaz/react-weather-app | 0 | Weather App for Air Quality Hackathon, UFRO 2018 - Got 2nd Place
