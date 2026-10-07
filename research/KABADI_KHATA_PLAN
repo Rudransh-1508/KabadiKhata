@@ -1,0 +1,78 @@
+# Winning plan: Kabadi Khata (Waste and Energy track)
+
+> One-line pitch: **"India issued 6 lakh fake recycling certificates because nobody can prove who actually collected the plastic. Kabadi Khata lets the kabadiwala prove it with one photo and a voice note, and catches the recyclers who are lying."**
+
+## The user sentence (the organisers asked for this exact thing)
+"Raju collects plastic door-to-door in Lajpat Nagar and sells it for cash. Nothing he does is on record, so the 2026 rules are about to cut him out, and brands keep buying certificates for plastic that was never recycled."
+
+## Architecture (every box should appear on screen in the video)
+```
+Kabadiwala PWA / WhatsApp-style chat (Amplify Hosting)
+   │ photo of scale + pile, Hindi voice note, GPS
+   ▼
+API Gateway → Lambda ──► S3 (photos, audio)
+                │
+                ▼
+     Strands Agent (on Bedrock: Claude or Nova, multimodal)
+       tools: read_scale(photo) · classify_material(photo)
+              transcribe(audio) [Amazon Transcribe hi-IN]
+              check_consistency(voice, photo, gps, time)
+              dedupe(photo perceptual hash)
+              create_receipt()  ← the only write tool (allowlisted)
+                │
+                ▼
+     DynamoDB: append-only, hash-chained receipts
+       (each receipt stores hash(prev_receipt) → tamper-evident)
+                │  QR code on every lot
+                ▼
+     Aggregator / recycler scans QR → custody hand-off entries
+                │
+                ▼
+     Fraud Radar (EventBridge nightly → Step Functions → agent)
+       mass balance: recycler's claimed EPR tonnes vs verified inflow
+       reused photos, impossible geo/time, capacity × days
+                │
+                ▼
+     Brand / auditor view, with access controlled by Cedar policies
+       kabadiwala: own receipts and earnings only
+       recycler: its own inflows
+       brand: aggregate provenance of the certificates it bought
+       auditor: everything plus the flags
+```
+- **Bounded agent (copies what won with Beacon):** the agent can only call `create_receipt` after the consistency check passes. On a mismatch (voice says 20 kg, scale shows 12), it asks Raju a follow-up question instead of guessing. It never writes certificates.
+- **Cedar:** a rarely used AWS open-source tool and a judging plus. Show the policy file for 10 seconds in the video.
+- **Honesty slide (the organisers said this "reads as competence"):** a photo can be staged. Mitigations are perceptual-hash dedupe, geo and time plausibility, mass balance (the catch that matters), and random physical audits flagged by risk score.
+
+## Seed data for the demo
+- Do real field work Thursday evening or Friday morning: **photograph 1 or 2 real kabadiwalas' scales and piles** (with permission) and record a voice note. Ten seconds of a real kabadiwala in the video beats anything synthetic.
+- Synthetic month: 30 kabadiwalas × ~25 days → ~2,000 receipts flowing into 3 recyclers. **Recycler C claims 38× its verified inflow**, mirroring the real CPCB finding. The radar catches it on screen.
+
+## 4-day schedule (no code before the clock starts on Thu, Oct 8; repo history must match)
+**Before Thu (allowed: planning and learning):** verify Builder Center student status, create the AWS account and enable Bedrock model access, work through the Strands quickstart and a Cedar tutorial, ask Discord about the exact clock start time.
+
+| Day | Goal | Done when |
+|---|---|---|
+| **Thu Oct 8** | Repo, IaC (SAM), S3 + DynamoDB + Lambda. Strands agent with `read_scale` + `classify_material` working on 5 real photos. Field visit. | Photo in, correct kg and material out |
+| **Fri Oct 9** | Transcribe Hindi voice notes, consistency check, hash-chained `create_receipt`, QR, PWA chat UI on Amplify. Synthetic data generator. | Raju's flow works end to end on a phone |
+| **Sat Oct 10** | Recycler QR hand-off, Fraud Radar (Step Functions), Cedar policies, brand/auditor view. **If at DTU, use the 7 PM showcase as your video rehearsal.** | Radar flags Recycler C on the dashboard |
+| **Sun Oct 11** | Freeze features by 12:00. Polish, record the video by 4 PM, write the Builder Center blog (AirPods prize), README with architecture plus list of AI tools used. **Submit by 6 PM** (deadline 8 PM IST). | Submitted, video link tested signed-out |
+
+**Cut list if behind (in order):** WhatsApp integration (keep the PWA), the recycler QR UI (seed the hand-offs), the nightly schedule (use a "Run radar" button). **Never cut:** Raju's photo-to-receipt flow and the fraud catch.
+
+## The 3-minute video script
+- **0:00 to 0:20, hook:** news headline "6 lakh fake recycling certificates" → "Every one of them claims plastic that someone like Raju collected. Nobody can prove it."
+- **0:20 to 0:45, the person:** real kabadiwala footage. Who he is, why the 2026 rules cut him out.
+- **0:45 to 1:40, Raju's flow on a phone:** photo plus voice note → the agent reads the scale and asks one follow-up on a mismatch → receipt with QR. Show the CloudWatch log or Strands trace for 3 seconds to prove it is real.
+- **1:40 to 2:25, fraud radar:** brand view → certificate provenance → Recycler C flagged at 38× → drill into the evidence. Switch roles to show **Cedar** hiding Raju's data from the brand.
+- **2:25 to 2:45, AWS architecture slide:** Strands, Bedrock, Transcribe, Lambda, DynamoDB, S3, Step Functions, Cedar, Amplify.
+- **2:45 to 3:00, what changes:** for Raju (a record, a premium, inclusion) and for the brand (certificates it can defend). Say plainly what is real and what is synthetic.
+
+## Things that will make judges remember it
+- A real kabadiwala on camera
+- The number "38×" being caught live
+- The agent **refusing** to write a receipt on bad evidence and asking a question instead (shows a safe agent design)
+- A clean SAM template in the repo, so engineers on the panel see real infrastructure
+- A blog post on Builder Center titled something like *"How we caught a fake recycler with a hash chain and an agent"*
+
+## If you'd rather do the Air track
+Use the #2 idea (Parali Dispatch) from `04_ideas_ranked.md` with the same skeleton: a Strands agent with an allowlisted `book_slot` tool, Sentinel-2 + FIRMS from AWS Open Data, Step Functions for nightly risk scoring, and Polly Hindi voice or SNS SMS to farmers. The CHC operator approves the dispatch plan.
