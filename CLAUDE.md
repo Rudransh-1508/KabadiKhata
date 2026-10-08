@@ -2,10 +2,20 @@
 
 This repo is our entry for **Environmental Hacks** (WeMakeDevs × AWS Bharat Builds Tour), **Waste and Energy track**.
 - **Plan:** [`research/KABADI_KHATA_SCOPED_DOWN.md`](research/KABADI_KHATA_SCOPED_DOWN.md). Follow it for scope, owners and timeline.
+- **2-day priorities:** [`research/TWO_DAY_SCOPE.md`](research/TWO_DAY_SCOPE.md). Read it first — it sets what to build in what order when time is short.
 - **This file:** the rules every change must follow, plus the fixes from our plan review. Where the plan and this file disagree, **this file wins**.
 
 ## What we're building (one paragraph)
 A kabadiwala sends a photo of the scale plus a Hindi voice note (or taps buttons) to a Telegram bot. A Strands agent reads the photo and the voice note and checks they agree. If they do, it writes **one** hash-chained receipt and sends back a receipt card. If not, it asks one question in Hindi and writes nothing. An auditor console runs a deterministic fraud radar over seeded recycler data and approves inspections. Cedar decides who sees what. Everything runs locally (**Build It only**).
+
+## Priority when time is short (2 build days: Fri Oct 9 + Sat Oct 10; ship Sun Oct 11)
+Build the **spine (P0)** first and do not start anything else until all 4 beats run end-to-end on the real stack. Full detail and cut lines in [`research/TWO_DAY_SCOPE.md`](research/TWO_DAY_SCOPE.md).
+1. **Receipt with a refusal** — photo + voice/taps → agent → on mismatch ask ONE Hindi question and write nothing; on pass write one hash-chained receipt + card.
+2. **Fraud caught** — radar flags Recycler C (R1 mass balance) → auditor requests inspection.
+3. **Tamper breaks the chain** — edit a receipt → `/verify` shows the broken seq.
+4. **Cedar denial** — brand is denied a kabadiwala's identity; provenance only in aggregate.
+
+**Infra cutoff — Fri 18:00:** if `sam build --use-container` + OpenSearch are not both green, fall back to **FastAPI + SQLite** and keep a `sam local invoke` clip for the "Built on AWS" visual. Strands + Cedar already satisfy the AWS requirement. Do not lose a day to infra.
 
 ## Hard constraints
 - **Build It only.** No AWS account, Bedrock, S3, DynamoDB or Cognito. The AWS open-source tools we use: **Strands Agents, Cedar, SAM CLI (`sam local`), OpenSearch.**
