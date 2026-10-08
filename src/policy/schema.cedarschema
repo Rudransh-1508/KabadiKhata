@@ -1,0 +1,25 @@
+// Kabadi Khata Cedar schema. Entity-reference attributes (collector, buyer) are optional
+// so that a resource without them evaluates to a deny instead of a Cedar error;
+// every policy that reads them is guarded with `resource has ...`.
+entity Role;
+entity Actor in [Role];
+entity Agent;
+entity Receipt { collector?: Actor };
+entity Chain { collector?: Actor };
+entity Certificate { buyer?: Actor };
+entity Flag;
+entity Radar;
+
+action create_collection appliesTo { principal: [Actor, Agent], resource: [Chain], context: {} };
+action read_receipt appliesTo { principal: [Actor, Agent], resource: [Chain, Receipt], context: {} };
+action read_receipt_pii appliesTo { principal: [Actor, Agent], resource: [Receipt, Chain], context: {} };
+action verify_chain appliesTo { principal: [Actor, Agent], resource: [Chain], context: {} };
+action create_receipt appliesTo {
+  principal: [Actor, Agent],
+  resource: [Receipt],
+  context: { consistency_ok: Bool }
+};
+action read_provenance appliesTo { principal: [Actor, Agent], resource: [Certificate], context: {} };
+action run_radar appliesTo { principal: [Actor, Agent], resource: [Radar], context: {} };
+action approve_flag appliesTo { principal: [Actor, Agent], resource: [Flag], context: {} };
+action issue_certificate appliesTo { principal: [Actor, Agent], resource: [Certificate], context: {} };
