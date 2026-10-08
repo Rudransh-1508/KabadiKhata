@@ -1,4 +1,50 @@
-# Bots: Environmental Hacks research
+# Kabadi Khata
+
+Verified scrap receipts for kabadiwalas, and a fraud check on plastic recycling certificates. Our entry for WeMakeDevs **Environmental Hacks** (Bharat Builds Tour, AWS), Waste and Energy track. Rules for contributors: [`CLAUDE.md`](CLAUDE.md). Vocabulary: [`CONTEXT.md`](CONTEXT.md).
+
+> Draft sections from P3 (run and architecture). P4 owns the final README.
+
+## Run it
+
+Needs [uv](https://docs.astral.sh/uv/) and Python 3.12. Docker only for the SAM step.
+
+```bash
+make demo        # creates .env (MOCK_LLM=1, no API key needed), installs, seeds, starts everything
+```
+
+`make demo` seeds a synthetic month (labelled synthetic everywhere) and starts the API on http://localhost:3000. Other targets: `make test`, `make seed`, `make api`, `make tamper`, `make sam-invoke`. Endpoint reference: [`src/api/README.md`](src/api/README.md).
+
+## Architecture
+
+```
+ Kabadiwala (Telegram)            Auditor / Brand (Streamlit console)
+        │ photo + taps or voice              │
+        ▼                                    ▼
+ ┌────────────────────── FastAPI (port 3000) ───────────────────────┐
+ │ every request → policy.authz.is_allowed()  (Cedar)               │
+ │                                                                  │
+ │ POST /collections → Strands agent ── read_photo, transcribe,     │
+ │                     (src/agent)       phash_check, consistency   │
+ │                          │ create_receipt: only if consistent    │
+ │                          ▼            and Cedar allows           │
+ │                  ledger: hash-chained Receipts per Kabadiwala    │
+ │                          │                                       │
+ │ /radar/run ──────► radar: R1 mass balance · R2 duplicate photo   │
+ │                          · R3 broken chain → Flags → auditor     │
+ │ /certificates, /provenance → verified-backed % for brands        │
+ └──────────────────────────┬───────────────────────────────────────┘
+                            ▼
+                   SQLite (data/kk.db) + data/photos/
+```
+
+- **AWS open-source tools:** Strands Agents (the agent), Cedar (every access decision), SAM CLI (`template.yaml` runs the same app as an arm64 Lambda; `make sam-invoke`).
+- **Why FastAPI + SQLite, not SAM + OpenSearch:** [`docs/adr/0001-fastapi-sqlite-demo-stack.md`](docs/adr/0001-fastapi-sqlite-demo-stack.md).
+- **Tamper evidence:** each Receipt's hash covers every field and the previous Receipt's hash; its ID comes from its hash. Editing any stored Receipt makes `/verify` report the exact position. Corrections are new entries, never edits.
+
+---
+
+## Research
+
 
 Research for WeMakeDevs **Environmental Hacks** (Bharat Builds Tour, AWS), 8–11 Oct 2026.
 

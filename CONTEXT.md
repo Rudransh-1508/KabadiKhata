@@ -55,7 +55,7 @@ Certificate tonnes for a Recycler, material and month, divided by Verified inflo
 _Avoid_: Fraud score, multiplier
 
 **Verified-backed percentage**:
-The share of a Certificate's tonnes covered by Verified inflow, shown to the Brand.
+The share of a Certificate's tonnes that its Recycler's Verified inflow can support after the 0.85 yield, capped at 100%; the inverse of the Over-claim ratio. Shown to the Brand.
 _Avoid_: Coverage, confidence
 
 **Flag**:
