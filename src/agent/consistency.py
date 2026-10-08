@@ -1,9 +1,10 @@
 """Deterministic consistency rules. Code decides; the LLM never overrides this.
 
-Returns every failing reason, plus ONE Hindi follow-up question for the first (most important) failure.
+Returns every failing reason, plus ONE Hindi follow-up Question for the first (most important) failure.
 """
 from __future__ import annotations
 
+import math
 from typing import Optional
 
 from common.models import ConsistencyResult, PhashResult, PhotoRead
@@ -11,6 +12,7 @@ from common.models import ConsistencyResult, PhashResult, PhotoRead
 KG_TOLERANCE = 0.10          # claimed kg must be within ±10% of the scale reading
 MIN_CONFIDENCE = 0.60        # below this, ask for a clearer photo
 MAX_KG = 500.0
+KG_EPSILON = 1e-9            # float noise guard so exactly ±10% passes (12 vs 10.8)
 
 MATERIAL_GROUP = {
     "PET": "plastic", "HDPE": "plastic", "LDPE_film": "plastic", "mixed_plastic": "plastic",
@@ -45,7 +47,7 @@ def check_consistency(
     retake = "तराज़ू का नंबर साफ़ नहीं दिख रहा। कृपया तराज़ू की साफ़ फ़ोटो फिर से भेजिए।"
     if photo.kg is None:
         fail("scale_unreadable", retake)
-    elif photo.confidence < MIN_CONFIDENCE:
+    elif not photo.confidence >= MIN_CONFIDENCE:  # also catches NaN
         fail("low_confidence", retake)
     elif not (0 < photo.kg <= MAX_KG):
         fail("weight_out_of_range", f"तराज़ू पर {_kg(photo.kg)} किलो दिख रहा है, यह सही नहीं लगता। कृपया फिर से तौलकर फ़ोटो भेजिए।")
@@ -56,7 +58,9 @@ def check_consistency(
     if photo.kg is not None and not reasons:
         if claimed_kg is None:
             fail("no_claim", f"तराज़ू पर {_kg(photo.kg)} किलो दिख रहा है। क्या यह सही है?")
-        elif abs(claimed_kg - photo.kg) > KG_TOLERANCE * photo.kg:
+        elif not math.isfinite(claimed_kg) or claimed_kg <= 0:
+            fail("claim_invalid", "आपने जो किलो बताया वह सही नहीं लगता। कृपया सही वज़न बताइए।")
+        elif abs(claimed_kg - photo.kg) > KG_TOLERANCE * photo.kg + KG_EPSILON:
             fail("kg_mismatch", f"तराज़ू {_kg(photo.kg)} किलो दिखा रहा है, आपने {_kg(claimed_kg)} किलो बताया। कौन सा सही है?")
 
     if claimed_material and not reasons:
@@ -67,6 +71,9 @@ def check_consistency(
                 "material_mismatch",
                 f"फ़ोटो में {MATERIAL_HI[photo.material]} दिख रहा है, आपने {MATERIAL_HI[claimed_material]} बताया। कौन सा सही है?",
             )
+
+    if photo.kg is not None and not reasons and photo.material == "unknown" and not claimed_material:
+        fail("material_unknown", "माल की पहचान फ़ोटो से नहीं हुई। कृपया बताइए कि यह कौन सा माल है।")
 
     return ConsistencyResult(
         ok=not reasons, reasons=reasons, warnings=warnings, question_hi=questions[0] if questions else None

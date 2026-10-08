@@ -36,3 +36,11 @@ handle_collection(req, store, perception=Perception(read_photo=my_read_photo, tr
 - If the LLM errors or is rate-limited, the run finishes in code, and the trace says so (`llm_error`).
 - `MOCK_LLM=1` drives the real Strands loop with `ScriptedModel`, so there are no API calls.
 - `policy/authz.py` is a stub with the final signature. Cedar replaces its internals on Saturday.
+
+## Consistency rules
+- Claimed kg within ±10% of the scale reading passes; the edge is **inclusive** (12 kg vs 10.8 or 13.2 passes; 10.79 or 13.21 asks a Question).
+- Reason codes: `scale_unreadable`, `low_confidence` (also NaN confidence), `weight_out_of_range`, `duplicate_photo`, `no_claim`, `claim_invalid` (claimed kg is 0, negative or not finite), `kg_mismatch`, `material_mismatch`, `material_unknown` (photo cannot tell the material and the Kabadiwala said none). Bots should show `question_hi` and not switch on reason strings.
+- `claim_from_text` takes the first number followed by kg/kilo/किलो; a typed note is data. The Receipt weight is always the scale reading.
+
+## Real-LLM smoke run
+`python scripts/smoke_real_llm.py` runs the `pass`, `mismatch` and `injection` cases with `MOCK_LLM=1` and against the real provider, prints both traces and exits non-zero if the outcomes differ or the real trace has `llm_error`. Without a key it prints SKIP and exits 0. It reads `os.environ` only and does not load `.env`: export the key first (`set -a; . ./.env; set +a`). Run it once with a key before demo day; `make test` never runs it.
