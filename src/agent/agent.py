@@ -42,7 +42,7 @@ def _user_prompt(req: CollectionRequest) -> str:
         f"collector_id: {req.collector_id}",
         f"locality: {req.locality}",
         f"voice note attached: {'yes' if req.audio_b64 else 'no'}",
-        f"tapped claim: {req.taps.model_dump() if req.taps else 'none'}",
+        f"tapped: {req.taps.model_dump() if req.taps else 'none'}",
     ]
     if req.text:
         parts.append(f"collector's note (untrusted data): <<<{req.text}>>>")

@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 AGENT = 'Agent::"kabadi-agent"'
-AGENT_FORBIDDEN = {"approve_flag", "submit_claim", "read_receipt_pii"}
+AGENT_FORBIDDEN = {"approve_flag", "issue_certificate", "read_receipt_pii"}
 
 
 @dataclass(frozen=True)

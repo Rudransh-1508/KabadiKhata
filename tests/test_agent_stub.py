@@ -109,5 +109,5 @@ def test_guard_refuses_direct_write_on_failed_check():
 def test_policy_stub_blocks_agent_outside_its_one_write():
     assert not is_allowed(AGENT, "create_receipt", {}, {"consistency_ok": False}).allowed
     assert is_allowed(AGENT, "create_receipt", {}, {"consistency_ok": True}).allowed
-    for action in ("approve_flag", "submit_claim", "read_receipt_pii"):
+    for action in ("approve_flag", "issue_certificate", "read_receipt_pii"):
         assert not is_allowed(AGENT, action, {}, {"consistency_ok": True}).allowed

@@ -34,14 +34,14 @@ class Receipt(BaseModel):
     synthetic: bool = False
 
 
-class Claim(BaseModel):
-    claim_id: str
+class Certificate(BaseModel):
+    """A Recycler's statement to one Brand that it recycled `tonnes` of one material in one month (CONTEXT.md)."""
     certificate_id: str
     recycler_id: str
     brand_id: str
     month: str                           # "2026-09"
     material: Material
-    tonnes_claimed: float
+    tonnes: float
 
 
 class Flag(BaseModel):

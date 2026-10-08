@@ -194,7 +194,7 @@ def build_tools(s: Session) -> list:
 
     @tool
     def check_consistency() -> dict:
-        """Check the photo against the collector's claim. Returns ok, reasons and one Hindi question."""
+        """Check the photo against what the kabadiwala tapped or said. Returns ok, reasons and one Hindi question."""
         return do_check_consistency(s).model_dump()
 
     @tool
