@@ -31,9 +31,7 @@ If the clock runs out, a demo with only these still wins the track. Each is one 
 ---
 
 ## Hard infra cutoff (decide today, don't bleed Day 1)
-The two risky pieces on Windows are **`sam build --use-container`** and **OpenSearch on WSL**. Apply the CLAUDE.md fixes (SAM↔OpenSearch network, 60s Lambda timeout, OGG→WAV in the bot).
-
-> **Cutoff — Fri 18:00:** if SAM + OpenSearch are not both green by 6pm today, **fall back to plain FastAPI + SQLite** for the API and store, and keep a `sam local invoke` clip + `template.yaml` in the repo for the "Built on AWS" visual. Strands + Cedar already satisfy the AWS requirement. **Do not lose a day to infra.**
+**Decided Fri morning: FastAPI + SQLite** (see `docs/adr/0001-fastapi-sqlite-demo-stack.md`). The demo Mac has 8 GB RAM, too little for OpenSearch + SAM containers + bot + console + recording. `template.yaml` plus a `sam local invoke` clip covers the SAM visual; Strands + Cedar satisfy the AWS requirement. **Do not lose a day to infra.**
 
 ---
 
@@ -43,7 +41,7 @@ The two risky pieces on Windows are **`sam build --use-container`** and **OpenSe
 - **Sun 11:00 — feature freeze.** Only demo-blocking fixes after this. Film, edit, submit by 18:00.
 
 ## Cut lines, in order (drop from the top when behind)
-Blog → Dashboards → QR UI → R2 duplicate rule → radar explainer LLM (use template text) → voice (taps only) → OpenSearch (SQLite). **Never cut any of the 4 spine beats, Cedar, or R1 mass balance.**
+Blog → Dashboards → QR UI → R2 duplicate rule → radar explainer LLM (use template text) → voice (taps only). **Never cut any of the 4 spine beats, Cedar, or R1 mass balance.**
 
 ## Also, today (cheap, high-leverage)
 - Someone films **10 seconds of a real kabadiwala's scale + pile** (with consent) for the hook — wins Idea & Impact. Nothing depends on it, but get it if you can.
