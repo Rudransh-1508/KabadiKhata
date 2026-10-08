@@ -1,8 +1,9 @@
 # Read-only search copy of the ledger (see src/search/mirror.py). Not needed for the spine.
+# Fixed project name: every clone on a machine shares one OpenSearch instead of fighting over port 9200.
+name: kabadi-khata
 services:
   opensearch:
     image: opensearchproject/opensearch:2.19.1
-    container_name: kk-opensearch
     environment:
       - discovery.type=single-node
       - DISABLE_SECURITY_PLUGIN=true
