@@ -12,17 +12,17 @@ T0 = datetime(2026, 10, 9, 6, 0, tzinfo=timezone.utc)
 
 
 def draft(collector="kw-raju", i=0, **overrides) -> dict:
-    fields = dict(
-        collector_id=collector,
-        material="PET",
-        weight_kg=12.0 + i / 1000,
-        price_inr_per_kg=18.0,
-        locality="Lajpat Nagar",
-        ts=T0 + timedelta(minutes=i, microseconds=123),
-        photo_sha256=f"{i:064x}",
-        phash="",
-        evidence={"photo_kg": 12.0, "confidence": 0.93, "read_at": T0},
-    )
+    fields = {
+        "collector_id": collector,
+        "material": "PET",
+        "weight_kg": 12.0 + i / 1000,
+        "price_inr_per_kg": 18.0,
+        "locality": "Lajpat Nagar",
+        "ts": T0 + timedelta(minutes=i, microseconds=123),
+        "photo_sha256": f"{i:064x}",
+        "phash": "",
+        "evidence": {"photo_kg": 12.0, "confidence": 0.93, "read_at": T0},
+    }
     return fields | overrides
 
 
@@ -103,7 +103,7 @@ def test_concurrent_appends_never_share_a_seq(store):
         try:
             for i in range(10):
                 store.append_receipt(draft(i=n * 100 + i))
-        except Exception as e:  # pragma: no cover - surfaced by the assert below
+        except Exception as e:  # noqa: BLE001 - surfaced by the assert below
             errors.append(e)
 
     threads = [threading.Thread(target=worker, args=(n,)) for n in range(5)]
@@ -118,7 +118,7 @@ def test_concurrent_appends_never_share_a_seq(store):
 
 def test_naive_timestamp_rejected(store):
     with pytest.raises(ValueError):
-        store.append_receipt(draft(ts=datetime(2026, 10, 9, 6, 0)))
+        store.append_receipt(draft(ts=datetime(2026, 10, 9, 6, 0)))  # noqa: DTZ001 - naive on purpose
 
 
 def test_chain_fields_from_the_writer_are_ignored(store):
