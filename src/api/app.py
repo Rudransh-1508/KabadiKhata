@@ -13,16 +13,22 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from typing import Literal
+
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 from agent.agent import handle_collection
-from common.models import CollectionRequest
+from common.models import Actor, CollectionRequest
 from ledger import chain
 from ledger.store import Store
 from policy.authz import Decision, is_allowed
+from radar import rules
 
 log = logging.getLogger("kk.api")
+
+Role = Literal["kabadiwala", "recycler", "brand", "auditor"]
 
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
@@ -114,6 +120,8 @@ def list_receipts(collector_id: str, who: str = Depends(principal), store: Store
         "collector_id": collector_id,
         "receipts": [r.model_dump(mode="json") for r in receipts],
         "monthly": monthly,
+        # The income statement shows "chain verified" only when this is ok
+        "chain": chain.verify(receipts).model_dump(),
     }
 
 
@@ -121,3 +129,101 @@ def list_receipts(collector_id: str, who: str = Depends(principal), store: Store
 def verify_chain(collector_id: str, who: str = Depends(principal), store: Store = Depends(get_store)):
     require(who, "verify_chain", chain_resource(collector_id))
     return chain.verify(store.receipts_for(collector_id)).model_dump()
+
+
+@app.get("/photos/{photo_sha256}.jpg")
+def get_photo(photo_sha256: str, who: str = Depends(principal)):
+    require(who, "read_receipt_pii", {"type": "Photo", "id": photo_sha256})
+    if len(photo_sha256) != 64 or not all(c in "0123456789abcdef" for c in photo_sha256):
+        raise HTTPException(404, "no such photo")
+    path = photo_dir() / f"{photo_sha256}.jpg"
+    if not path.exists():
+        raise HTTPException(404, "no such photo (seeded receipts have no photo files)")
+    return FileResponse(path, media_type="image/jpeg")
+
+
+# ---------- actors ----------
+
+class Registration(BaseModel):
+    name: str
+    locality: str | None = None
+
+
+@app.put("/actors/{actor_id}")
+def register_kabadiwala(actor_id: str, body: Registration, who: str = Depends(principal),
+                        store: Store = Depends(get_store)):
+    """The bot's /start: a Kabadiwala registers (or renames) themselves. Other roles come from the seed."""
+    require(who, "register", {"type": "Actor", "id": actor_ref(actor_id)})
+    existing = store.get_actor(actor_id)
+    if existing and existing.role != "kabadiwala":
+        raise HTTPException(409, f"{actor_id} is a {existing.role}")
+    actor = Actor(actor_id=actor_id, role="kabadiwala", name=body.name, locality=body.locality)
+    store.put_actor(actor)
+    return actor.model_dump()
+
+
+@app.get("/actors")
+def list_actors(role: Role | None = None, who: str = Depends(principal), store: Store = Depends(get_store)):
+    require(who, "list_actors", {"type": "Directory", "role": role})
+    return [a.model_dump() for a in store.list_actors(role)]
+
+
+# ---------- fraud radar (auditor) ----------
+
+class RadarRun(BaseModel):
+    month: str | None = None
+
+
+@app.post("/radar/run")
+def run_radar(body: RadarRun | None = None, who: str = Depends(principal), store: Store = Depends(get_store)):
+    require(who, "run_radar", {"type": "Radar"})
+    store.replace_flags(rules.run(store, body.month if body else None))
+    return [f.model_dump(mode="json") for f in store.list_flags()]
+
+
+@app.get("/flags")
+def list_flags(who: str = Depends(principal), store: Store = Depends(get_store)):
+    require(who, "read_flags", {"type": "Radar"})
+    return [f.model_dump(mode="json") for f in store.list_flags()]
+
+
+class FlagDecision(BaseModel):
+    decision: Literal["inspect", "dismiss"]
+
+
+@app.post("/flags/{flag_id}/decision")
+def decide_flag(flag_id: str, body: FlagDecision, who: str = Depends(principal), store: Store = Depends(get_store)):
+    """Only a person decides what happens to a Flag; the rule and the explanation never do."""
+    flag = store.get_flag(flag_id)
+    if flag is None:
+        raise HTTPException(404, "no such flag")
+    require(who, "approve_flag", {"type": "Flag", "id": flag_id, "rule": flag.rule})
+    status = "inspection_requested" if body.decision == "inspect" else "dismissed"
+    decided_by = who.removeprefix('Actor::"').removesuffix('"')
+    return store.decide_flag(flag_id, status, decided_by).model_dump(mode="json")
+
+
+# ---------- certificates (brand) ----------
+
+def certificate_resource(cert) -> dict:
+    return {"type": "Certificate", "id": cert.certificate_id, "buyer": actor_ref(cert.brand_id)}
+
+
+@app.get("/certificates")
+def list_certificates(brand_id: str, who: str = Depends(principal), store: Store = Depends(get_store)):
+    """A Brand's Certificates, each with its verified-backed percentage."""
+    out = []
+    for cert in store.list_certificates(brand_id=brand_id):
+        require(who, "read_provenance", certificate_resource(cert))
+        p = rules.provenance(store, cert)
+        out.append({**p["certificate"], "verified_backed_pct": p["verified_backed_pct"]})
+    return out
+
+
+@app.get("/provenance/{certificate_id}")
+def get_provenance(certificate_id: str, who: str = Depends(principal), store: Store = Depends(get_store)):
+    cert = store.get_certificate(certificate_id)
+    if cert is None:
+        raise HTTPException(404, "no such certificate")
+    require(who, "read_provenance", certificate_resource(cert))
+    return rules.provenance(store, cert)

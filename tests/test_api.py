@@ -85,3 +85,75 @@ def test_denial_is_403_with_cedar_body(client, monkeypatch):
     r = client.get("/receipts", params={"collector_id": "kw-raju"}, headers={"X-Principal": "brand-1"})
     assert r.status_code == 403
     assert r.json() == {"denied_by": "cedar", "action": "read_receipt", "reason": "brand cannot read identities"}
+
+
+# ---------- radar, flags, certificates (seeded sample world) ----------
+
+AUDITOR = {"X-Principal": "au-1"}
+BRAND = {"X-Principal": "br-1"}
+
+
+@pytest.fixture
+def seeded(client, tmp_path):
+    from ledger.store import Store
+    from ledger.world import load_world, sample_world
+
+    load_world(Store(tmp_path / "kk.db"), sample_world())
+    return client
+
+
+def test_radar_flags_recycler_c_and_the_tampered_chain(seeded):
+    flags = seeded.post("/radar/run", headers=AUDITOR).json()
+    r1 = [f for f in flags if f["rule"] == "R1_mass_balance"]
+    assert [f["subject_id"] for f in r1] == ["rc-c"]
+    assert flags[0]["flag_id"] == r1[0]["flag_id"]  # highest score first
+    assert any(f["rule"] == "R3_broken_chain" and f["subject_id"] == "kw-sunita" for f in flags)
+
+
+def test_auditor_decision_is_recorded_and_survives_a_rerun(seeded):
+    flag_id = seeded.post("/radar/run", headers=AUDITOR).json()[0]["flag_id"]
+    decided = seeded.post(f"/flags/{flag_id}/decision", headers=AUDITOR, json={"decision": "inspect"}).json()
+    assert decided["status"] == "inspection_requested" and decided["decided_by"] == "au-1"
+    seeded.post("/radar/run", headers=AUDITOR)
+    again = {f["flag_id"]: f for f in seeded.get("/flags", headers=AUDITOR).json()}[flag_id]
+    assert again["status"] == "inspection_requested" and again["decided_ts"]
+
+
+def test_unknown_flag_is_404(seeded):
+    assert seeded.post("/flags/nope/decision", headers=AUDITOR, json={"decision": "dismiss"}).status_code == 404
+
+
+def test_brand_sees_backed_percentage_per_certificate(seeded):
+    certs = {c["certificate_id"]: c for c in seeded.get("/certificates", params={"brand_id": "br-1"}, headers=BRAND).json()}
+    assert certs["CERT-C-PET-1"]["verified_backed_pct"] < 5
+    assert certs["CERT-A-PET-1"]["verified_backed_pct"] > 85
+    assert all(c["brand_id"] == "br-1" for c in certs.values())
+
+
+def test_provenance_is_aggregate(seeded):
+    p = seeded.get("/provenance/CERT-A-PET-1", headers=BRAND).json()
+    assert p["by_locality"] and p["verified_inflow_t"] > 0
+    assert "kw-" not in str(p)
+
+
+def test_kabadiwala_registers_from_the_bot(client):
+    r = client.put("/actors/kw-new", headers={"X-Principal": "kw-new"}, json={"name": "Naya", "locality": "Okhla"})
+    assert r.json() == {"actor_id": "kw-new", "role": "kabadiwala", "name": "Naya", "locality": "Okhla"}
+    assert [a["actor_id"] for a in client.get("/actors", params={"role": "kabadiwala"}, headers=RAJU).json()] == ["kw-new"]
+
+
+def test_registration_cannot_take_over_another_role(seeded):
+    r = seeded.put("/actors/au-1", headers={"X-Principal": "au-1"}, json={"name": "x"})
+    assert r.status_code == 409
+
+
+def test_receipts_report_chain_status(seeded):
+    body = seeded.get("/receipts", params={"collector_id": "kw-sunita"}, headers=AUDITOR).json()
+    assert body["chain"]["ok"] is False and body["chain"]["broken_at_seq"] is not None
+
+
+def test_photo_served_after_collection(client):
+    sha = collect(client).json()["receipt"]["photo_sha256"]
+    r = client.get(f"/photos/{sha}.jpg", headers=RAJU)
+    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+    assert client.get(f"/photos/{'0' * 64}.jpg", headers=RAJU).status_code == 404

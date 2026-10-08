@@ -1,6 +1,6 @@
 export PYTHONPATH := src
 
-.PHONY: install test api seed demo
+.PHONY: install test api seed demo tamper
 
 install:
 	uv sync --extra dev
@@ -18,3 +18,7 @@ seed:
 # Seeds, then starts every process in the Procfile in one terminal
 demo: seed
 	uv run honcho start
+
+# Video backup for the tamper demo: make tamper COLLECTOR=kw-raju SEQ=0 KG=40
+tamper:
+	uv run python -m ledger.tamper $(COLLECTOR) $(SEQ) $(KG)
