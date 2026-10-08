@@ -6,7 +6,7 @@ include .env
 export
 endif
 
-.PHONY: install test api seed demo tamper
+.PHONY: install test api seed demo tamper sam-invoke
 
 install: .env
 	uv sync --extra dev
@@ -32,3 +32,8 @@ demo: install seed
 # Video backup for the tamper demo: make tamper COLLECTOR=kw-raju SEQ=0 KG=40
 tamper:
 	uv run python -m ledger.tamper $(COLLECTOR) $(SEQ) $(KG)
+
+# The "Built on AWS" clip: build the API as an arm64 Lambda and invoke it with a collection event
+sam-invoke:
+	sam build --use-container
+	sam local invoke KabadiKhataApi --event events/collection.json
