@@ -66,8 +66,10 @@ CREATE TABLE IF NOT EXISTS flags (
 
 
 class Store:
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, mirror=None):
+        """`mirror` (search.mirror.Mirror) gets a best-effort copy of each new Receipt."""
         self.path = Path(path)
+        self.mirror = mirror
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as con:
             con.executescript(SCHEMA)
@@ -140,7 +142,13 @@ class Store:
                     int(receipt.synthetic), receipt.prev_hash, receipt.hash,
                 ),
             )
+        if self.mirror is not None:
+            self.mirror.index_receipt(receipt)
         return receipt
+
+    def all_receipts(self) -> list[Receipt]:
+        rows = self._read("SELECT * FROM receipts ORDER BY collector_id, seq")
+        return [_receipt(r) for r in rows]
 
     def get_receipt(self, receipt_id: str) -> Receipt | None:
         rows = self._read("SELECT * FROM receipts WHERE receipt_id = ?", (receipt_id,))

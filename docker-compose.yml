@@ -1,0 +1,19 @@
+# Read-only search copy of the ledger (see src/search/mirror.py). Not needed for the spine.
+services:
+  opensearch:
+    image: opensearchproject/opensearch:2.19.1
+    container_name: kk-opensearch
+    environment:
+      - discovery.type=single-node
+      - DISABLE_SECURITY_PLUGIN=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      # 8 GB demo Mac: keep the heap small (measured ~0.9 GB container total)
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30

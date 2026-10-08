@@ -2,7 +2,8 @@
 
 ```bash
 make install        # creates .env from .env.example (MOCK_LLM=1), then uv sync
-make seed           # data/kk.db from data/synth/world.json, or the built-in sample world
+make up             # optional: OpenSearch for the search copy (Docker)
+make seed           # data/kk.db from data/synth/world.json, or the built-in sample world; copies to OpenSearch
 make api            # http://localhost:3000/docs for the interactive schema
 make test
 ```
@@ -25,6 +26,9 @@ Every request needs `X-Principal: <actor_id>` (e.g. `kw-raju`, `au-1`, `br-1`). 
 | `GET /certificates?brand_id=` | brand | The brand's Certificates, each with `verified_backed_pct` |
 | `GET /provenance/{certificate_id}` | brand | `verified_inflow_t`, `recycler_certified_t`, `verified_backed_pct`, `by_locality` (no Kabadiwala identities) |
 | `GET /photos/{photo_sha256}.jpg` | auditor | The scale photo of a live Receipt (seeded Receipts have none) |
+| `GET /search/receipts?q=&recycler_id=&material=&month=` | auditor | `{"total", "receipts"}`, newest first. `q` matches receipt ID, Kabadiwala, locality, material or recycler. From the OpenSearch copy; 503 if it's off or down. |
+| `GET /analytics/tonnage?month=` | auditor chart | `[{"recycler_id", "material", "receipts", "tonnes"}]`, **recorded** tonnes from the OpenSearch copy. Verified figures come from `/provenance`. |
+| `GET /health` | anyone | `{"ok", "search_copy"}` (the OpenSearch URL, or null when off) |
 
 ## Actions passed to `policy.authz.is_allowed` (for P2's Cedar policies)
 
@@ -41,6 +45,7 @@ Principals are `Actor::"<X-Principal>"`. Resources are dicts; entity references 
 | `run_radar`, `read_flags` | `{"type": "Radar"}` | the auditor |
 | `approve_flag` | `{"type": "Flag", "id": str, "rule": str}` | the auditor (the agent is already forbidden) |
 | `read_provenance` | `{"type": "Certificate", "id": str, "buyer": Actor}` | the brand that bought it; the auditor |
+| `search_receipts`, `read_analytics` | `{"type": "SearchIndex"}` | the auditor |
 
 ## Fraud rules (`src/radar/rules.py`)
 
@@ -63,3 +68,10 @@ make tamper COLLECTOR=kw-raju SEQ=0 KG=40     # backup if typing live goes wrong
 # Built on AWS: the same app as an arm64 Lambda (Docker must be running)
 make sam-invoke
 ```
+
+## OpenSearch search copy (`src/search/mirror.py`, ADR 0002)
+
+- SQLite is the ledger. Each new Receipt is copied to OpenSearch **after** it's saved; if OpenSearch is down the copy is skipped (paused 30 s after a failure) and the collection still succeeds.
+- After an outage, `make reindex` copies anything missed.
+- The copy doesn't see tampering (it's an edit to SQLite), so the tamper demo uses `/verify`, never search.
+- Set `KK_OPENSEARCH_URL=` (empty) in `.env` to turn it off.

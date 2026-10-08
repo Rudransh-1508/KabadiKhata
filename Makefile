@@ -6,7 +6,7 @@ include .env
 export
 endif
 
-.PHONY: install test api seed demo tamper sam-invoke
+.PHONY: install test api seed demo tamper sam-invoke up down reindex
 
 install: .env
 	uv sync --extra dev
@@ -25,8 +25,21 @@ api:
 seed:
 	uv run python -m ledger.seed
 
-# Seeds, then starts every process in the Procfile in one terminal
-demo: install seed
+# OpenSearch for the read-only search copy. Optional: everything else works without it.
+up:
+	docker compose up -d --wait
+
+down:
+	docker compose down
+
+reindex:
+	uv run python -m search.reindex
+
+# Seeds, then starts every process in the Procfile in one terminal.
+# The leading "-" on up: no Docker means no search copy, not a failed demo.
+demo: install
+	-$(MAKE) up
+	$(MAKE) seed
 	uv run honcho start
 
 # Video backup for the tamper demo: make tamper COLLECTOR=kw-raju SEQ=0 KG=40

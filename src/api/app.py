@@ -24,6 +24,7 @@ from ledger import chain
 from ledger.store import Store
 from policy.authz import Decision, is_allowed
 from radar import rules
+from search.mirror import Mirror, SearchUnavailable, mirror_from_env
 
 log = logging.getLogger("kk.api")
 
@@ -35,12 +36,23 @@ app = FastAPI(title="Kabadi Khata API")
 
 
 @lru_cache
-def _store_at(path: str) -> Store:
-    return Store(path)
+def _store_at(path: str, url: str, index: str) -> Store:
+    return Store(path, mirror=mirror_from_env() if url else None)
 
 
 def get_store() -> Store:
-    return _store_at(os.getenv("KK_DB_PATH", "data/kk.db"))
+    return _store_at(
+        os.getenv("KK_DB_PATH", "data/kk.db"),
+        os.getenv("KK_OPENSEARCH_URL", "").strip(),
+        os.getenv("KK_OPENSEARCH_INDEX", "receipts"),
+    )
+
+
+def get_mirror() -> Mirror:
+    mirror = get_store().mirror
+    if mirror is None:
+        raise HTTPException(503, "search copy is off (KK_OPENSEARCH_URL not set)")
+    return mirror
 
 
 def photo_dir() -> Path:
@@ -84,7 +96,8 @@ def chain_resource(collector_id: str) -> dict:
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True}
+    mirror = get_store().mirror
+    return {"ok": True, "search_copy": mirror.url if mirror else None}
 
 
 # Handlers are plain `def` so FastAPI runs them in a thread pool: the agent call blocks on the LLM.
@@ -230,3 +243,29 @@ def get_provenance(certificate_id: str, who: Who, store: Db):
         raise HTTPException(404, "no such certificate")
     require(who, "read_provenance", certificate_resource(cert))
     return rules.provenance(store, cert)
+
+
+# ---------- search copy in OpenSearch (auditor) ----------
+
+def _searching(fn):
+    try:
+        return fn()
+    except SearchUnavailable as exc:
+        raise HTTPException(503, f"search copy unavailable: {exc}") from exc
+
+
+@app.get("/search/receipts")
+def search_receipts(who: Who, q: str | None = None, recycler_id: str | None = None,
+                    material: str | None = None, month: str | None = None):
+    """Find Receipts by ID, Kabadiwala, locality, material or recycler. Read from the OpenSearch copy."""
+    require(who, "search_receipts", {"type": "SearchIndex"})
+    mirror = get_mirror()
+    return _searching(lambda: mirror.search_receipts(q, recycler_id=recycler_id, material=material, month=month))
+
+
+@app.get("/analytics/tonnage")
+def tonnage(who: Who, month: str | None = None):
+    """Recorded tonnes by recycler and material, for the console chart. Verified figures come from /provenance."""
+    require(who, "read_analytics", {"type": "SearchIndex"})
+    mirror = get_mirror()
+    return _searching(lambda: mirror.tonnage(month))

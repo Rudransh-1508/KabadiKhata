@@ -16,10 +16,10 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
 3. **Tamper breaks the chain** — edit a receipt → `/verify` shows the broken seq.
 4. **Cedar denial** — brand is denied a kabadiwala's identity; provenance only in aggregate.
 
-**Infra (decided Fri morning, see [`docs/adr/0001-fastapi-sqlite-demo-stack.md`](docs/adr/0001-fastapi-sqlite-demo-stack.md)):** the demo runs on **FastAPI + SQLite**, not SAM + OpenSearch. `template.yaml` plus a `sam local invoke` clip covers the SAM visual; Strands + Cedar satisfy the AWS requirement. Fix #1 (SAM ↔ OpenSearch networking) no longer applies.
+**Infra (decided Fri morning, see [`docs/adr/0001-fastapi-sqlite-demo-stack.md`](docs/adr/0001-fastapi-sqlite-demo-stack.md)):** the demo runs on **FastAPI + SQLite**, not SAM + OpenSearch. `template.yaml` plus a `sam local invoke` clip covers the SAM visual; Strands + Cedar satisfy the AWS requirement. Fix #1 (SAM ↔ OpenSearch networking) no longer applies. **OpenSearch is back as a read-only search copy** ([ADR 0002](docs/adr/0002-opensearch-as-read-only-search-copy.md)): SQLite stays the ledger, and nothing in the spine may depend on OpenSearch.
 
 ## Hard constraints
-- **Build It only.** No AWS account, Bedrock, S3, DynamoDB or Cognito. The AWS open-source tools we use: **Strands Agents, Cedar, SAM CLI (`sam local invoke`).** OpenSearch was dropped (ADR 0001).
+- **Build It only.** No AWS account, Bedrock, S3, DynamoDB or Cognito. The AWS open-source tools we use: **Strands Agents, Cedar, SAM CLI (`sam local invoke`), OpenSearch** (read-only search copy, ADR 0002).
 - **LLM:** Gemini (or OpenAI) through Strands' non-Bedrock model provider. Always pass the model explicitly, because Strands defaults to Bedrock.
 - **Hackathon rules:** no code written before the clock started; repo history must match the event dates; every member commits every day; list the AI coding tools used in the README; credit every dataset, icon and library with its licence.
 - **Never commit secrets.** API keys and the Telegram token live in `.env` (gitignored). `.env.example` has placeholders only.
@@ -77,19 +77,21 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
 9. **Video trim.** Fold the "मेरा हिसाब" shot into the phone-flow segment. Show the architecture as a ~10-second overlay, not a separate slide. Give the time saved to the tamper demo and the Recycler C flag.
 
 ### Smaller implementation notes
-- **Cedar entity references:** `Receipt.collector` and `Certificate.buyer` must be **entity references** (`Actor::"<id>"`), not plain `collector_id` strings. Otherwise `resource.collector == principal` never matches. Build the entities from the OpenSearch documents in `authz.py`.
+- **Cedar entity references:** `Receipt.collector` and `Certificate.buyer` must be **entity references** (`Actor::"<id>"`), not plain `collector_id` strings. Otherwise `resource.collector == principal` never matches. Build the entities from the SQLite store (`ledger.store.Store`) in `authz.py`; the OpenSearch copy is never an authority.
 - Cedar policies are default deny. Every API handler calls `is_allowed(principal, action, resource, context)` **before** touching data, and returns HTTP 403 with `{"denied_by": "cedar", "action": ...}`. The console renders this as the red "Denied by Cedar policy" banner.
 - Hash chain: canonical JSON (sorted keys, fixed float format, UTC ISO timestamps). `prev_hash = "GENESIS"` for seq 0. `verify(collector_id)` returns the first broken seq.
 - Perceptual hash duplicate check: compare Hamming distance in Python against stored hashes (fine at ~1,000 receipts). The threshold is tuned on edited copies of our own photos.
 - Builder Center blog: do it after a safe submission (18:00–20:00 on Day 3). It's a separate prize, so it's worth an hour if time allows.
 
 ## Commands
-- `make seed` creates the SQLite database and loads the synthetic world
+- `make up` / `make down` start and stop OpenSearch (optional; Docker)
+- `make seed` creates the SQLite database, loads the synthetic world and copies it to OpenSearch if it's up
+- `make reindex` rebuilds the OpenSearch copy from SQLite
 - `make api` runs the FastAPI app
 - `make sam-invoke` runs `sam build --use-container` then `sam local invoke` on a fixture (for the video)
 - `make bot` and `make console`
 - `make test`
-- `make demo` runs everything above in order. **It must work from a fresh clone in ≤ 10 minutes.**
+- `make demo` runs everything above in order (OpenSearch is skipped if Docker isn't running). **It must work from a fresh clone in ≤ 10 minutes.**
 
 ## Definition of done for any feature
 It runs end to end on the real stack (not just in a unit test), it has at least one test, synthetic data is labelled, nothing secret is committed, and it appears in the demo script. Otherwise it waits.

@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "mangum>=0.19",
+    "opensearch-py>=2.7",
 ]
 
 [project.optional-dependencies]

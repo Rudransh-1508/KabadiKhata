@@ -25,6 +25,7 @@ This merges [`CLAUDE.md`](../CLAUDE.md) (rules and fixes #1–#9), [`TWO_DAY_SCO
    - The API runs as **FastAPI on SQLite**. No OpenSearch.
    - SAM stays visible: a real `template.yaml` (arm64) wrapping the collection handler, plus one recorded `sam local invoke` clip for the "Built on AWS" visual.
    - Strands and Cedar carry the AWS requirement.
+   - **Update:** OpenSearch is back as a read-only search copy for the auditor (ADR 0002). The spine never depends on it. **Close the browser before recording**: the demo Mac has little memory to spare.
 
 ---
 

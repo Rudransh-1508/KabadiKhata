@@ -8,6 +8,7 @@ from pathlib import Path
 
 from ledger.store import Store
 from ledger.world import load_world, sample_world
+from search.reindex import reindex
 
 WORLD = Path("data/synth/world.json")
 
@@ -21,8 +22,11 @@ def main() -> int:
     else:
         world, source = sample_world(), "built-in sample world (P1's data/synth/world.json not found)"
     started = time.monotonic()
-    counts = load_world(Store(db), world)
+    store = Store(db)
+    counts = load_world(store, world)
     print(f"Seeded {db} from {source} in {time.monotonic() - started:.1f}s: {counts}")
+    # One bulk copy at the end; tampering above edits SQLite only, as an attacker would
+    print(reindex(store))
     return 0
 
 

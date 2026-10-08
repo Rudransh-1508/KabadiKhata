@@ -6,7 +6,7 @@ Verified scrap receipts for kabadiwalas, and a fraud check on plastic recycling 
 
 ## Run it
 
-Needs [uv](https://docs.astral.sh/uv/) and Python 3.12. Docker only for the SAM step.
+Needs [uv](https://docs.astral.sh/uv/) and Python 3.12. Docker for OpenSearch and the SAM step; without it everything else still runs.
 
 ```bash
 make demo        # creates .env (MOCK_LLM=1, no API key needed), installs, seeds, starts everything
@@ -34,10 +34,11 @@ make demo        # creates .env (MOCK_LLM=1, no API key needed), installs, seeds
  │ /certificates, /provenance → verified-backed % for brands        │
  └──────────────────────────┬───────────────────────────────────────┘
                             ▼
-                   SQLite (data/kk.db) + data/photos/
+        SQLite ledger (data/kk.db) + data/photos/ ──copy──► OpenSearch
+                                                        (search + tonnage chart)
 ```
 
-- **AWS open-source tools:** Strands Agents (the agent), Cedar (every access decision), SAM CLI (`template.yaml` runs the same app as an arm64 Lambda; `make sam-invoke`).
+- **AWS open-source tools:** Strands Agents (the agent), Cedar (every access decision), SAM CLI (`template.yaml` runs the same app as an arm64 Lambda; `make sam-invoke`), OpenSearch (read-only search copy for the auditor; [ADR 0002](docs/adr/0002-opensearch-as-read-only-search-copy.md)).
 - **Why FastAPI + SQLite, not SAM + OpenSearch:** [`docs/adr/0001-fastapi-sqlite-demo-stack.md`](docs/adr/0001-fastapi-sqlite-demo-stack.md).
 - **Tamper evidence:** each Receipt's hash covers every field and the previous Receipt's hash; its ID comes from its hash. Editing any stored Receipt makes `/verify` report the exact position. Corrections are new entries, never edits.
 
