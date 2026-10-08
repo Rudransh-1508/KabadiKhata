@@ -25,7 +25,7 @@ _Avoid_: Admin, reviewer
 ### Records
 
 **Receipt**:
-One sale of one material by a Kabadiwala, with weight, price and photo evidence. Receipts are never edited; corrections are out of scope.
+One sale of one material by a Kabadiwala, with weight, price and photo evidence. Receipts are never edited; corrections are out of scope. Its ID (`KK-` plus 7 characters) comes from its own hash, so the ID on the card vouches for the contents.
 _Avoid_: Collection (that is the request that may produce a Receipt), transaction, entry
 
 **Collection**:
@@ -47,7 +47,7 @@ _Avoid_: Claim, EPR credit
 ### Fraud check
 
 **Verified inflow**:
-The tonnes of one material sold to a Recycler in one month, counting only Receipts whose Chain verifies. Receipts without a known buyer are excluded.
+The tonnes of one material sold to a Recycler in one calendar month (India time), counting only Receipts whose Chain verifies. Receipts without a known buyer are excluded.
 _Avoid_: Supply, input
 
 **Over-claim ratio**:
