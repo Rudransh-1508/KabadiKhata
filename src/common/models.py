@@ -55,6 +55,8 @@ class Flag(BaseModel):
     status: Literal["open", "inspection_requested", "dismissed"] = "open"
     decided_by: Optional[str] = None
     decided_ts: Optional[datetime] = None
+    facts: dict = Field(default_factory=dict)        # numbers an explanation may cite; keys per rule (src/radar/explain.py)
+    decision_note: Optional[str] = None              # Auditor's free text, set by decide_flag
 
 
 class Actor(BaseModel):
