@@ -198,11 +198,14 @@ def test_with_explanation_fills_and_keeps_existing():
 
 
 def test_explain_is_offline():
+    # decisions.py must never import network or model code. explain.py may import
+    # strands lazily inside the default completer (spec p2-3), never at module level.
     banned = {"strands", "requests", "httpx", "urllib", "socket"}
-    for mod in (explain_mod, decisions):
+    for mod, lazy_ok in ((explain_mod, True), (decisions, False)):
         tree = ast.parse(Path(mod.__file__).read_text(encoding="utf-8"))
+        nodes = tree.body if lazy_ok else list(ast.walk(tree))
         found = set()
-        for node in ast.walk(tree):
+        for node in nodes:
             if isinstance(node, ast.Import):
                 found.update(a.name.split(".")[0] for a in node.names)
             elif isinstance(node, ast.ImportFrom) and node.module:
