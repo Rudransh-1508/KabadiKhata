@@ -26,8 +26,9 @@ from perception._shared import to_float as _float
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = "photo-v2"
+PROMPT_VERSION = "photo-v3"
 SCALE_TYPES = {"hanging_dial", "tubular_spring", "dial_platform", "digital", "beam_balance"}
+ANALOG = {"hanging_dial", "tubular_spring", "dial_platform"}   # read from printed numbers, which code checks
 MAX_KG = 500.0
 LB_TO_KG = 0.45359237
 FAILED = PhotoRead(kg=None, material="unknown", confidence=0.0)
@@ -40,6 +41,11 @@ Return JSON only, with these keys:
   unit: "kg", "g" or "lb" (the unit printed on the dial or display), or null
   material: what is being weighed, one of {list(MATERIALS)}
   confidence: 0 to 1, how sure you are of the reading
+  dial_numbers: for a dial or column scale, the major numbers printed on it, copied exactly as
+    printed, in scale order (a round dial: clockwise starting at the top; a column: from the 0
+    end). Include repeats and odd numbers if they are printed. [] for digital or beam scales.
+  other_column: for a column scale with numbers on both sides, the other side's numbers in the
+    same order, copied exactly; otherwise null.
   notes: one short sentence on anything that made the reading hard
 
 How to read each scale:
@@ -113,10 +119,30 @@ def parse_answer(text: str) -> PhotoRead:
     kg = to_kg(_float(obj.get("reading")), obj.get("unit"))
     if obj.get("scale_type") not in SCALE_TYPES:  # no weighing scale seen: any number is not a Scale reading
         kg = None
+    elif obj.get("scale_type") in ANALOG and not markings_consistent(obj.get("dial_numbers"), obj.get("other_column")):
+        kg = None  # a dial whose printed numbers repeat, go backwards or disagree can't be read
 
     if kg is None or not (0 < kg <= MAX_KG):
         return PhotoRead(kg=None, material=material, confidence=min(confidence, 0.4))
     return PhotoRead(kg=round(kg, 2), material=material, confidence=confidence)
+
+
+def markings_consistent(numbers, other=None) -> bool:
+    """Code's check on the model's copy of a dial: at least 3 numbers, strictly increasing in scale
+    order, and the same on both columns of a two-column tube. A round dial may print its maximum
+    at the top where 0 and the maximum meet (50, 10, 20, 30, 40 on a 50 kg dial)."""
+    if not isinstance(numbers, list):
+        return False
+    vals = [_float(n) for n in numbers]
+    if len(vals) < 3 or any(v is None for v in vals):
+        return False
+    if vals[0] > vals[1] and vals[0] == vals[-1] + (vals[-1] - vals[-2]):
+        vals = [0.0] + vals[1:]
+    if any(b <= a for a, b in zip(vals, vals[1:])):
+        return False
+    if other is not None:
+        return isinstance(other, list) and [_float(n) for n in other] == [_float(n) for n in numbers]
+    return True
 
 
 def to_kg(reading: Optional[float], unit) -> Optional[float]:
