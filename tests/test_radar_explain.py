@@ -211,3 +211,29 @@ def test_explain_is_offline():
             elif isinstance(node, ast.ImportFrom) and node.module:
                 found.add(node.module.split(".")[0])
         assert not found & banned
+
+
+def test_radar_run_explains_flags(tmp_path, monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "1")  # never reach the network, whatever the shell has set
+    from datetime import datetime, timezone
+
+    from common.models import Certificate
+    from ledger.store import Store
+    from radar import rules
+
+    store = Store(tmp_path / "kk.db")
+    for i in range(10):  # 1 t of Verified inflow supports 0.85 t; the Certificate says 5 t
+        store.append_receipt({
+            "collector_id": "kw-raju", "material": "PET", "weight_kg": 100.0, "price_inr_per_kg": 18.0,
+            "locality": "Seelampur", "ts": datetime(2026, 9, 10, 6, i, tzinfo=timezone.utc),
+            "photo_sha256": f"{i:064x}", "phash": "", "recycler_id": "rc-c", "synthetic": True,
+        })
+    store.put_certificate(Certificate(certificate_id="CERT-X", recycler_id="rc-c", brand_id="br-1",
+                                      month="2026-09", material="PET", tonnes=5.0))
+
+    flags = rules.run(store)
+    assert flags and all(f.explanation_en and f.explanation_hi for f in flags)
+
+    raw = rules.r1_mass_balance(store, rules.verified_receipts(store))
+    assert [(f.rule, f.subject_id, f.evidence_ids, f.facts) for f in flags] == \
+           [(f.rule, f.subject_id, f.evidence_ids, f.facts) for f in raw]
