@@ -13,7 +13,7 @@ def llm_provider() -> str:
 
 
 def gemini_model_id() -> str:
-    return os.getenv("GEMINI_MODEL_ID", "gemini-2.5-flash")
+    return os.getenv("GEMINI_MODEL_ID", "gemini-flash-latest")
 
 
 def openai_model_id() -> str:
