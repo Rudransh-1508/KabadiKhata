@@ -24,9 +24,19 @@ def cache_dir() -> str:
     return os.getenv("KK_CACHE_DIR", ".cache")
 
 
+def perception_timeout_s() -> float:
+    """Per-call limit for read_photo / transcribe, so one collection stays under ~25 s (CLAUDE.md #2)."""
+    try:
+        v = float(os.getenv("PERCEPTION_TIMEOUT_S", "20"))
+    except ValueError:
+        return 20.0
+    return v if 0 < v < float("inf") else 20.0
+
+
 def explain_timeout_s() -> float:
     try:
         v = float(os.getenv("LLM_EXPLAIN_TIMEOUT_S", "20"))
     except ValueError:
         return 20.0
     return v if 0 < v < float("inf") else 20.0
+
