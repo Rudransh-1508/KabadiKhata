@@ -78,6 +78,11 @@ def decide_flag(flag_id: str, decision: str, principal: str) -> dict:
     return _post(f"/flags/{flag_id}/decision", principal, json={"decision": decision})
 
 
+def verify_chain(collector_id: str, principal: str) -> dict:
+    """GET /verify/{collector_id} -> {ok, length, broken_at_seq, reason}. The R3 evidence (beat #3)."""
+    return _get(f"/verify/{collector_id}", principal)
+
+
 # ---------- brand ----------
 
 def list_certificates(brand_id: str, principal: str) -> list[dict]:

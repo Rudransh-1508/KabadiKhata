@@ -26,7 +26,7 @@ bot:
 	KK_USE_MOCK=0 uv run python -m bot.telegram_bot
 
 console:
-	uv run streamlit run console/app.py --server.headless true --server.port 8501
+	KK_USE_MOCK=0 uv run streamlit run console/app.py --server.headless true --server.port 8501
 
 # Rebuilds data/kk.db from data/synth/world.json (P1 generates it)
 seed:

@@ -147,6 +147,14 @@ def decide_flag(flag_id: str, decision: str, principal: str) -> dict:
     return next(f for f in _flags_now() if f["flag_id"] == flag_id)
 
 
+def verify_chain(collector_id: str, principal: str) -> dict:
+    for f in _FLAGS:
+        if f["rule"] == "R3_broken_chain" and f["subject_id"] == collector_id:
+            seq = f["facts"]["broken_at_seq"]
+            return {"ok": False, "length": seq + 1, "broken_at_seq": seq, "reason": "contents changed after writing"}
+    return {"ok": True, "length": 0, "broken_at_seq": None, "reason": None}
+
+
 # ---------- brand ----------
 
 def list_certificates(brand_id: str, principal: str) -> list[dict]:

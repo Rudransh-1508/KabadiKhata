@@ -102,7 +102,14 @@ def auditor_view() -> None:
                 st.metric("Receipts in near-identical cluster", int(f["score"]))
                 st.caption("(Side-by-side duplicate photos render here once photo files are wired.)")
             elif f["rule"] == "R3_broken_chain":
-                st.metric("Chain broken at seq", f.get("facts", {}).get("broken_at_seq", "—"))
+                # Ask the ledger, not the flag: /verify recomputes the chain right now
+                try:
+                    v = api.verify_chain(f["subject_id"], principal)
+                    st.metric("Chain broken at seq", "—" if v["ok"] else f"#{v['broken_at_seq']}")
+                    if v.get("reason"):
+                        st.caption(v["reason"])
+                except Exception as exc:  # the flag still stands without the live check
+                    st.caption(f"(Chain check for {f['subject_id']} unavailable: {exc})")
 
             st.write(f"**Evidence:** {', '.join(f.get('evidence_ids', [])) or '—'}")
 
