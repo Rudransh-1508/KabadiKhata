@@ -28,6 +28,12 @@ product = [
     "streamlit",
     "pandas",
 ]
+# P1 look-alike photo check (DINOv2-small via ONNX Runtime). Optional: not installed by
+# `make install`, and the check is skipped when it's missing. `uv sync --extra dedupe` to use it.
+dedupe = [
+    "numpy>=2.2.6",
+    "onnxruntime>=1.24.3",
+]
 
 [tool.pytest.ini_options]
 # "." so the bot/ and console/ packages import in tests; "src" for the backend.
