@@ -6,10 +6,10 @@ include .env
 export
 endif
 
-.PHONY: install test api seed demo tamper sam-invoke up down reindex
+.PHONY: install test api seed demo tamper sam-invoke up down reindex bot console
 
 install: .env
-	uv sync --extra dev --extra product
+	uv sync --extra dev --extra product --extra product
 
 .env:
 	cp .env.example .env
@@ -20,6 +20,13 @@ test:
 
 api:
 	uv run uvicorn api.app:app --port 3000 --reload
+
+# The bot talks to the real API here (its own default is the mock)
+bot:
+	KK_USE_MOCK=0 uv run python -m bot.telegram_bot
+
+console:
+	uv run streamlit run console/app.py --server.headless true --server.port 8501
 
 # Rebuilds data/kk.db from data/synth/world.json (P1 generates it)
 seed:
