@@ -43,17 +43,22 @@ def evaluate_world(world: dict) -> dict:
         cells = []
         for key, cert_t in rules.certified_t(store.list_certificates()).items():
             recycler = key[0]
-            cells.append({"recycler": recycler, "planted": truth["fraud_ratio"].get(recycler),
+            cells.append({"key": key, "recycler": recycler, "planted": truth["fraud_ratio"].get(recycler),
                           "ratio": rules.over_claim_ratio(cert_t, inflow.get(key, 0.0)),
                           # receipts after a chain break stopped counting towards this cell's inflow
                           "cut_by_break": inflow.get(key, 0.0) < all_inflow.get(key, 0.0) - 1e-9})
 
-        # Sanity: our ratio > threshold must be exactly what P3's R1 flags
-        r1_flagged = {f.subject_id for f in rules.r1_mass_balance(store, verified)}
-        ours = {c["recycler"] for c in cells if c["ratio"] > rules.r1_threshold()}
-        assert r1_flagged == ours, (r1_flagged, ours)
+        # Sanity: our ratio > threshold must flag exactly the recycler-material-month cells R1 flags
+        r1_flagged = {f.flag_id for f in rules.r1_mass_balance(store, verified)}
+        ours = {"R1:{}:{}:{}".format(*c["key"]) for c in cells if c["ratio"] > rules.r1_threshold()}
+        if r1_flagged != ours:
+            raise RuntimeError(f"eval disagrees with R1: only R1 {sorted(r1_flagged - ours)}, "
+                               f"only eval {sorted(ours - r1_flagged)}")
 
-        ring_ids = {r.receipt_id for r in store.all_receipts() if r.photo_sha256 in set(truth["ring_photo_sha256"])}
+        # R2 runs on verified receipts only, so ring receipts hidden by the planted tamper break
+        # are out of its reach by design and are not counted as R2 misses
+        ring_photos = set(truth["ring_photo_sha256"])
+        ring_ids = {r.receipt_id for r in verified if r.photo_sha256 in ring_photos}
         r2_ids = {rid for f in rules.r2_duplicate_photos(verified) for rid in f.evidence_ids}
         r3_cids = {f.subject_id for f in rules.r3_broken_chains(store, status)}
 
