@@ -17,19 +17,20 @@ from __future__ import annotations
 import datetime
 import os
 
+import httpx
 import pandas as pd
 import streamlit as st
 
 try:  # `streamlit run console/app.py` puts console/ on the path; tests import as a package
-    from console.logic import apply_decision, backed_badge, bar_from_provenance, rule_label
     from console.api_client import CedarDenied
+    from console.logic import backed_badge, bar_from_provenance, rule_label
     if os.environ.get("KK_USE_MOCK", "1") == "0":
         from console import api_client as api
     else:
         from console import mock_api as api
 except ImportError:  # pragma: no cover
-    from logic import apply_decision, backed_badge, bar_from_provenance, rule_label
     from api_client import CedarDenied
+    from logic import backed_badge, bar_from_provenance, rule_label
     if os.environ.get("KK_USE_MOCK", "1") == "0":
         import api_client as api
     else:
@@ -96,7 +97,7 @@ def auditor_view() -> None:
                                      index=["Claimed", "Verified inflow"]),
                         color="#1d7a48",
                     )
-                except Exception as exc:  # provenance is best-effort; the flag still stands
+                except (httpx.HTTPError, CedarDenied, KeyError) as exc:  # best-effort; the flag still stands
                     st.caption(f"(Provenance for {cert_id} unavailable: {exc})")
             elif f["rule"] == "R2_duplicate_photo":
                 st.metric("Receipts in near-identical cluster", int(f["score"]))
@@ -108,7 +109,7 @@ def auditor_view() -> None:
                     st.metric("Chain broken at seq", "—" if v["ok"] else f"#{v['broken_at_seq']}")
                     if v.get("reason"):
                         st.caption(v["reason"])
-                except Exception as exc:  # the flag still stands without the live check
+                except (httpx.HTTPError, CedarDenied, KeyError) as exc:  # the flag still stands without it
                     st.caption(f"(Chain check for {f['subject_id']} unavailable: {exc})")
 
             st.write(f"**Evidence:** {', '.join(f.get('evidence_ids', [])) or '—'}")

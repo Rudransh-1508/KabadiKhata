@@ -15,6 +15,7 @@ hardcoding the denial text.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 
 import httpx
@@ -52,10 +53,8 @@ def _post(path: str, principal: str, json: dict | None = None):
 def _handle(resp: httpx.Response):
     if resp.status_code == 403:
         body = {}
-        try:
+        with contextlib.suppress(ValueError):  # a non-JSON 403 is still a denial
             body = resp.json()
-        except Exception:  # pragma: no cover - a non-JSON 403 is still a denial
-            pass
         if body.get("denied_by") == "cedar":
             raise CedarDenied(body)
     resp.raise_for_status()
