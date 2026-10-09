@@ -15,6 +15,9 @@ def b64(data: bytes) -> str:
 def isolated_cache(tmp_path, monkeypatch):
     monkeypatch.setenv("KK_CACHE_DIR", str(tmp_path))
     monkeypatch.setenv("LLM_PROVIDER", "gemini")
+    photo._gemini_client.cache_clear()
+    yield
+    photo._gemini_client.cache_clear()
 
 
 def answer(**kw) -> str:
@@ -116,3 +119,61 @@ def test_gemini_call_has_a_timeout(monkeypatch):
     monkeypatch.setenv("PERCEPTION_TIMEOUT_S", "15")
     photo._ask_gemini(b"\xff\xd8 jpeg")
     assert seen["timeout_ms"] == 15000
+
+
+def test_a_bad_reply_is_not_cached(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    replies = ["", answer(reading=6)]
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: replies.pop(0))
+    img = b64(b"\xff\xd8 flaky")
+    assert photo.read_photo(img) == photo.FAILED
+    assert photo.read_photo(img).kg == 6.0  # asked again, not replayed
+
+
+@pytest.mark.parametrize("payload", ["", "not base64 at all!", "   "])
+def test_empty_or_garbage_payload_never_reaches_the_model(monkeypatch, payload):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: pytest.fail("model called"))
+    assert photo.read_photo(payload) == photo.FAILED
+
+
+def test_cached_answers_go_through_todays_checks(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "1")
+    raw = b"\xff\xd8 cached before a rule change"
+    from common import jsoncache
+    jsoncache.write_json(photo._cache_path(photo._cache_key(raw)),
+                         {"raw_answer": answer(scale_type="none", reading=10)})
+    assert photo.read_photo(b64(raw)).kg is None
+
+
+def test_vision_uses_gemini_even_when_the_agent_uses_openai(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: answer(reading=4))
+    assert photo.read_photo(b64(b"\xff\xd8 openai team")).kg == 4.0
+
+
+def test_missing_gemini_key_fails_closed(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    assert photo.read_photo(b64(b"\xff\xd8 no key")) == photo.FAILED
+
+
+def test_client_is_reused(monkeypatch):
+    made = []
+
+    class FakeModels:
+        def generate_content(self, **kw):
+            return type("R", (), {"text": answer()})()
+
+    class FakeClient:
+        def __init__(self, api_key, http_options):
+            made.append(1)
+            self.models = FakeModels()
+
+    from google import genai
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    photo._ask_gemini(b"\xff\xd8 one")
+    photo._ask_gemini(b"\xff\xd8 two")
+    assert len(made) == 1

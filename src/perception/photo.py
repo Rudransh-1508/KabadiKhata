@@ -12,15 +12,15 @@ from __future__ import annotations
 
 import base64
 import binascii
+import functools
 import hashlib
 import json
 import logging
 import os
-import tempfile
 from typing import Optional
 
 from agent import stub_tools
-from common import config
+from common import config, jsoncache
 from common.models import MATERIALS, PhotoRead
 
 log = logging.getLogger(__name__)
@@ -83,11 +83,15 @@ def read_photo(photo_b64: str) -> PhotoRead:
 
     try:
         answer = _ask_gemini(raw)
+    except KeyError:
+        log.error("read_photo needs GEMINI_API_KEY: photo reading always uses Gemini, whatever LLM_PROVIDER is")
+        return FAILED
     except Exception as exc:  # fail closed: the agent asks for a clearer photo
         log.warning("read_photo model call failed: %s", type(exc).__name__)
         return FAILED
     result = parse_answer(answer)
-    _cache_put(key, result, answer)
+    if result != FAILED:  # a bad reply is asked again next time, never replayed
+        _cache_put(key, answer)
     return result
 
 
@@ -151,9 +155,10 @@ def _strip_fences(text: str) -> str:
 
 def _decode(photo_b64: str) -> Optional[bytes]:
     try:
-        return base64.b64decode(photo_b64, validate=False)
+        raw = base64.b64decode(photo_b64 or "", validate=True)
     except (binascii.Error, ValueError, TypeError):
         return None
+    return raw or None
 
 
 def _mime(raw: bytes) -> str:
@@ -167,15 +172,11 @@ def _mime(raw: bytes) -> str:
 # ---------- the model call ----------
 
 def _ask_gemini(raw: bytes) -> str:
-    if config.llm_provider() != "gemini":
-        raise RuntimeError("read_photo supports LLM_PROVIDER=gemini only")
-    from google import genai
+    """Photo reading always uses Gemini vision (it needs GEMINI_API_KEY), even when the agent's
+    chat model is OpenAI (LLM_PROVIDER only picks the agent's model)."""
     from google.genai import types
 
-    client = genai.Client(
-        api_key=os.environ["GEMINI_API_KEY"],
-        http_options=types.HttpOptions(timeout=int(config.perception_timeout_s() * 1000)),
-    )
+    client = _gemini_client(os.environ["GEMINI_API_KEY"], int(config.perception_timeout_s() * 1000))
     resp = client.models.generate_content(
         model=config.gemini_model_id(),
         contents=[types.Part.from_bytes(data=raw, mime_type=_mime(raw)), USER_PROMPT],
@@ -186,6 +187,15 @@ def _ask_gemini(raw: bytes) -> str:
         ),
     )
     return resp.text or ""
+
+
+@functools.lru_cache(maxsize=4)
+def _gemini_client(api_key: str, timeout_ms: int):
+    """One client (and HTTP connection pool) per key and timeout, reused across calls."""
+    from google import genai
+    from google.genai import types
+
+    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms))
 
 
 # ---------- disk cache ----------
@@ -201,22 +211,15 @@ def _cache_path(key: str) -> str:
 
 
 def _cache_get(key: str) -> Optional[PhotoRead]:
-    try:
-        with open(_cache_path(key), encoding="utf-8") as fh:
-            return PhotoRead(**json.load(fh)["result"])
-    except (OSError, ValueError, KeyError, TypeError):
+    """Replay the model's stored answer through today's checks, so fixes to parse_answer reach
+    cached photos. Bump PROMPT_VERSION only when the prompt itself changes."""
+    entry = jsoncache.read_json(_cache_path(key))
+    if not entry or not isinstance(entry.get("raw_answer"), str):
         return None
+    result = parse_answer(entry["raw_answer"])
+    return None if result == FAILED else result
 
 
-def _cache_put(key: str, result: PhotoRead, answer: str) -> None:
-    try:
-        path = _cache_path(key)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump({"result": result.model_dump(), "raw_answer": answer,
-                       "prompt_version": PROMPT_VERSION, "model_id": config.gemini_model_id()},
-                      fh, ensure_ascii=False)
-        os.replace(tmp, path)
-    except OSError as exc:
-        log.warning("read_photo cache write failed: %s", type(exc).__name__)
+def _cache_put(key: str, answer: str) -> None:
+    jsoncache.write_json(_cache_path(key), {"raw_answer": answer, "prompt_version": PROMPT_VERSION,
+                                            "model_id": config.gemini_model_id()})
