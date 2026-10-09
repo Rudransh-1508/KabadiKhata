@@ -84,3 +84,35 @@ def test_model_failure_fails_closed(monkeypatch):
 
     monkeypatch.setattr(photo, "_ask_gemini", boom)
     assert photo.read_photo(b64(b"\xff\xd8 other")) == photo.FAILED
+
+
+@pytest.mark.parametrize("scale_type", ["none", None, "watch", "pressure_gauge", ""])
+def test_a_number_without_a_weighing_scale_is_not_a_reading(scale_type):
+    r = parse_answer(answer(scale_type=scale_type, reading=10.1, confidence=0.95))
+    assert r.kg is None and r.confidence <= 0.4
+
+
+def test_every_scale_type_in_the_prompt_is_accepted():
+    for t in photo.SCALE_TYPES:
+        assert t in photo.SYSTEM_PROMPT
+        assert parse_answer(answer(scale_type=t)).kg == 12.0
+
+
+def test_gemini_call_has_a_timeout(monkeypatch):
+    seen = {}
+
+    class FakeModels:
+        def generate_content(self, **kw):
+            return type("R", (), {"text": answer()})()
+
+    class FakeClient:
+        def __init__(self, api_key, http_options):
+            seen["timeout_ms"] = http_options.timeout
+            self.models = FakeModels()
+
+    from google import genai
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setenv("PERCEPTION_TIMEOUT_S", "15")
+    photo._ask_gemini(b"\xff\xd8 jpeg")
+    assert seen["timeout_ms"] == 15000

@@ -25,7 +25,8 @@ from common.models import MATERIALS, PhotoRead
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = "photo-v1"
+PROMPT_VERSION = "photo-v2"
+SCALE_TYPES = {"hanging_dial", "tubular_spring", "dial_platform", "digital", "beam_balance"}
 MAX_KG = 500.0
 LB_TO_KG = 0.45359237
 FAILED = PhotoRead(kg=None, material="unknown", confidence=0.0)
@@ -49,6 +50,10 @@ How to read each scale:
   pan opposite the goods, and only if the beam is level. If the beam tilts, reading is null.
 
 Rules:
+- First decide whether the photo shows a WEIGHING SCALE at all. Watches, wall clocks, pressure
+  gauges, electricity or water meters, speedometers, thermometers, phone screens, calculators and
+  price tags are NOT weighing scales: for those, and for photos with no scale, set scale_type to
+  "none" and reading to null, even if a number is visible.
 - If the display or needle is not visible, blurred, cut off, or the scale markings contradict
   each other, set reading to null and confidence below 0.5. Never guess a number.
 - Report what the scale shows, not what the load looks like it should weigh.
@@ -101,6 +106,8 @@ def parse_answer(text: str) -> PhotoRead:
     material = material if material in MATERIALS else "unknown"
     confidence = _clamp(_float(obj.get("confidence")), 0.0, 1.0) or 0.0
     kg = to_kg(_float(obj.get("reading")), obj.get("unit"))
+    if obj.get("scale_type") not in SCALE_TYPES:  # no weighing scale seen: any number is not a Scale reading
+        kg = None
 
     if kg is None or not (0 < kg <= MAX_KG):
         return PhotoRead(kg=None, material=material, confidence=min(confidence, 0.4))
@@ -165,7 +172,10 @@ def _ask_gemini(raw: bytes) -> str:
     from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    client = genai.Client(
+        api_key=os.environ["GEMINI_API_KEY"],
+        http_options=types.HttpOptions(timeout=int(config.perception_timeout_s() * 1000)),
+    )
     resp = client.models.generate_content(
         model=config.gemini_model_id(),
         contents=[types.Part.from_bytes(data=raw, mime_type=_mime(raw)), USER_PROMPT],
