@@ -15,6 +15,7 @@ from typing import Callable, Optional
 from strands import tool
 
 from agent import stub_tools
+from perception import photo as perception_photo
 from agent.consistency import MATERIAL_GROUP, check_consistency as _check
 from common.models import (
     CollectionRequest, ConsistencyResult, PhashResult, PhotoRead, PriceQuote, Receipt, Transcript,
@@ -26,7 +27,7 @@ from policy.authz import AGENT, is_allowed
 @dataclass
 class Perception:
     """Swap in P1's real functions here; signatures follow SCOPED_DOWN §3.3."""
-    read_photo: Callable[[str], PhotoRead] = stub_tools.read_photo
+    read_photo: Callable[[str], PhotoRead] = perception_photo.read_photo   # P1: real Gemini read
     transcribe: Callable[[str], Transcript] = stub_tools.transcribe
     phash_check: Callable[[str, ReceiptStore], PhashResult] = stub_tools.phash_check
     quote_price: Callable[[str, float], PriceQuote] = stub_tools.quote_price
