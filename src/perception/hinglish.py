@@ -8,6 +8,7 @@ fallback when the model gives no number. The sentence is data, never an instruct
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Optional
 
 _UNITS = {
@@ -34,17 +35,26 @@ _HUNDRED = {"sau", "सौ"}
 _MATERIALS = [
     ("PET", ["pet", "bottle", "botal", "बोतल", "bisleri", "बिसलेरी"]),
     ("LDPE_film", ["panni", "polythene", "polithin", "pannee", "पन्नी", "पॉलीथीन", "thaili", "थैली"]),
-    ("cardboard", ["gatta", "gatte", "गत्ता", "गत्ते", "cardboard", "carton", "कार्टन"]),
+    ("cardboard", ["gatta", "gatte", "गत्ता", "गत्ते", "cardboard", "carton", "कार्टन", "कार्डबोर्ड"]),
     ("paper", ["raddi", "akhbaar", "akhbar", "newspaper", "kagaz", "kaagaz", "रद्दी", "अख़बार", "अखबार", "काग़ज़", "कागज"]),
     ("HDPE", ["hdpe", "dabba", "dabbe", "डिब्बा", "डिब्बे", "balti", "बाल्टी"]),
-    ("metal", ["loha", "lohe", "लोहा", "लोहे", "tin", "टिन", "metal", "aluminium", "steel", "स्टील", "can", "cans"]),
-    ("ewaste", ["charger", "wire", "taar", "तार", "mobile", "battery", "e-waste", "ewaste", "चार्जर"]),
+    ("metal", ["loha", "lohe", "लोहा", "लोहे", "tin", "टिन", "metal", "aluminium", "steel", "स्टील", "can", "cans",
+               "एल्युमिनियम", "एल्यूमीनियम", "कैन", "bartan", "bartano", "बर्तन", "मेटल"]),
+    ("ewaste", ["charger", "wire", "taar", "तार", "mobile", "battery", "e-waste", "ewaste", "चार्जर", "मोबाइल", "बैटरी"]),
     ("mixed_plastic", ["plastic", "प्लास्टिक", "plastik"]),
 ]
 
 
+_NUKTA = "़"
+
+
+def _norm(word: str) -> str:
+    """Lower-case and drop the nukta dot, so कागज़ / कागज and अख़बार / अखबार match."""
+    return unicodedata.normalize("NFD", word).lower().replace(_NUKTA, "")
+
+
 def _tokens(text: str) -> list[str]:
-    return re.findall(r"[\wऀ-ॿ.]+", text.lower())
+    return re.findall(r"[\wऀ-ॿ.]+", _norm(text))
 
 
 def stated_kg(text: str) -> Optional[float]:
@@ -61,6 +71,12 @@ def stated_kg(text: str) -> Optional[float]:
         if value is not None:
             return value
     return None
+
+
+_UNITS = {_norm(k): v for k, v in _UNITS.items()}
+_STANDALONE = {_norm(k): v for k, v in _STANDALONE.items()}
+_MODIFIERS = {_norm(k): v for k, v in _MODIFIERS.items()}
+_HUNDRED = {_norm(k) for k in _HUNDRED}
 
 
 def _number_before(toks: list[str], i: int) -> Optional[float]:
@@ -86,6 +102,6 @@ def stated_material(text: str) -> Optional[str]:
     """The first material word in the sentence, mapped to a Material, or None."""
     toks = set(_tokens(text or ""))
     for material, words in _MATERIALS:
-        if any(w in toks for w in words):
+        if any(_norm(w) in toks for w in words):
             return material
     return None
