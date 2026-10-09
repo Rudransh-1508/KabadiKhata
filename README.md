@@ -53,19 +53,19 @@ See [`docs/personas.md`](docs/personas.md): **Raju** the kabadiwala, **Priya** t
 _Stack decision (not a fallback): the demo runs on **FastAPI + SQLite** per [ADR 0001](docs/adr/0001-fastapi-sqlite-demo-stack.md). Strands + Cedar satisfy the AWS requirement; nothing in the demo spine depends on OpenSearch._
 
 ## Run (local)
-Full stack needs [uv](https://docs.astral.sh/uv/) and Python 3.12; Docker is only for OpenSearch and the SAM step (everything else runs without it).
+Needs [uv](https://docs.astral.sh/uv/), Python 3.12 and `make` (on Windows: Git Bash or WSL). Docker is only for OpenSearch and the SAM step; everything else runs without it.
 ```bash
-make demo        # creates .env (MOCK_LLM=1, no API key needed), installs, seeds a synthetic month, starts the API on http://localhost:3000
+make demo        # creates .env (MOCK_LLM=1, no API key needed), installs, starts OpenSearch if Docker is up,
+                 # seeds a synthetic month, then runs the API (:3000), the console (:8501) and the bot
+make smoke       # in a second terminal: checks every endpoint and the 4 spine beats (14 checks), then re-seeds
 ```
-Other targets: `make test`, `make seed`, `make api`, `make tamper`, `make sam-invoke`. Endpoint reference: [`src/api/README.md`](src/api/README.md).
+- **Bot:** put `TELEGRAM_BOT_TOKEN` in `.env` (gitignored). Without it `make demo` runs everything except the bot. Flow: `/start` → photo → material → kg → receipt card; `/demo` toggles a simulated mismatch; `/hisaab` returns the income-statement image.
+- **Console:** http://localhost:8501, switch Auditor / Brand in the sidebar.
+- **Real LLM:** set `MOCK_LLM=0` and `GEMINI_API_KEY` in `.env`.
+- **One at a time:** `make api`, `make bot`, `make console`, `make up` / `make down` (OpenSearch), `make seed`, `make reindex`.
+- **Video helpers:** `make tamper COLLECTOR=kw-raju SEQ=0 KG=40` (backup for the live `sqlite3` edit), `make sam-invoke` (the app as an arm64 Lambda: one receipt written, one Cedar denial).
 
-**Bot and console (P4 — currently run against `bot/mock_api.py`; one-import swap to the real API):**
-```bash
-python -m venv .venv
-.venv\Scripts\python -m pip install -r bot/requirements.txt -r console/requirements.txt
-```
-- **Bot:** put `TELEGRAM_BOT_TOKEN` in `.env` (gitignored), then `python -m bot.telegram_bot`. Flow: `/start` → photo → material → kg → receipt card; `/demo` toggles a simulated mismatch; `/hisaab` returns the income-statement image.
-- **Console:** `streamlit run console/app.py` → switch Auditor / Brand in the sidebar.
+Endpoint and Cedar action reference: [`src/api/README.md`](src/api/README.md).
 
 ## Repo layout
 ```
@@ -92,7 +92,7 @@ _[TODO: P1 — scale/material accuracy on the held-out photos (state n); radar p
 
 ## Credits & licences
 - Fonts: system fonts (Segoe UI/Arial) at runtime; _[TODO: if an OFL font (Noto/DejaVu) is bundled, credit it here]._
-- Libraries: python-telegram-bot, Pillow, qrcode, pydub, Streamlit, pandas, FastAPI, Strands Agents, cedarpy (see each project's licence).
+- Libraries: python-telegram-bot, Pillow, qrcode, pydub, Streamlit, pandas, FastAPI, Uvicorn, Mangum, opensearch-py, httpx, honcho, Strands Agents, cedarpy (see each project's licence). OpenSearch runs from the `opensearchproject/opensearch` image (Apache-2.0).
 - _[TODO: P1 — credit any image dataset used, with its licence.]_
 
 ## Team
