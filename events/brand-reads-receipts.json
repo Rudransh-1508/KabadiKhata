@@ -1,0 +1,37 @@
+{
+  "resource": "/{proxy+}",
+  "path": "/receipts",
+  "httpMethod": "GET",
+  "headers": {
+    "X-Principal": "br-1"
+  },
+  "multiValueHeaders": {
+    "X-Principal": [
+      "br-1"
+    ]
+  },
+  "queryStringParameters": {
+    "collector_id": "kw-raju"
+  },
+  "multiValueQueryStringParameters": {
+    "collector_id": [
+      "kw-raju"
+    ]
+  },
+  "pathParameters": {
+    "proxy": "receipts"
+  },
+  "stageVariables": null,
+  "requestContext": {
+    "resourcePath": "/{proxy+}",
+    "httpMethod": "GET",
+    "path": "/Prod/receipts",
+    "stage": "Prod",
+    "requestId": "demo",
+    "identity": {
+      "sourceIp": "127.0.0.1"
+    }
+  },
+  "body": null,
+  "isBase64Encoded": false
+}

@@ -27,6 +27,8 @@ Resources:
           # Lambda can only write to /tmp
           KK_DB_PATH: /tmp/kk.db
           KK_PHOTO_DIR: /tmp/photos
+          # Empty /tmp on every cold start: load the synthetic sample world so Cedar knows the actors
+          KK_SEED_ON_COLD_START: "1"
       Events:
         Api:
           Type: Api
