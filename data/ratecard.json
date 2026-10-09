@@ -1,0 +1,22 @@
+{
+  "_note": "INDICATIVE scrap rates only, NOT a live or official price list. Values are representative mid-points compiled from publicly published Indian scrap-pickup rate sheets and paper-trade listings (Delhi NCR, ~Oct 2026). Real rates vary by locality, cleanliness, sorting and daily market; verify before any real-world use. In this project the price is a convenience shown on the receipt, NOT the pitch (see CLAUDE.md #7). Everything here is synthetic/indicative.",
+  "_sources": [
+    "Paper/board per-kg listings (indicative, undated trade page): https://indianprinterpublisher.com/?p=93014",
+    "General pattern of Delhi-NCR online scrap-pickup rate sheets (e.g. ScrapUncle / TheKabadiwala style daily rates) — not a single authoritative source; used only to set indicative mid-points."
+  ],
+  "currency": "INR",
+  "unit": "kg",
+  "as_of": "2026-10",
+  "indicative": true,
+  "rates": {
+    "PET":           { "inr_per_kg": 10, "range": [8, 12],   "label": "Plastic bottle (PET)" },
+    "HDPE":          { "inr_per_kg": 18, "range": [15, 22],  "label": "Hard plastic (HDPE)" },
+    "LDPE_film":     { "inr_per_kg": 6,  "range": [4, 8],    "label": "Polythene / film (LDPE)" },
+    "mixed_plastic": { "inr_per_kg": 6,  "range": [4, 9],    "label": "Mixed plastic" },
+    "cardboard":     { "inr_per_kg": 8,  "range": [6, 9],    "label": "Carton / cardboard" },
+    "paper":         { "inr_per_kg": 14, "range": [12, 15],  "label": "Paper / newspaper (raddi)" },
+    "metal":         { "inr_per_kg": 28, "range": [26, 32],  "label": "Metal (iron grade)", "note": "iron/steel grade; aluminium, brass and copper fetch much more" },
+    "ewaste":        { "inr_per_kg": 30, "range": [20, 45],  "label": "E-waste (mixed)", "note": "highly variable; boards/copper far higher, plastics far lower" },
+    "unknown":       { "inr_per_kg": 0,  "range": [0, 0],    "label": "Not priced" }
+  }
+}

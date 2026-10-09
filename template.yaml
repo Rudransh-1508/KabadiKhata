@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Kabadi Khata API (FastAPI on Lambda via Mangum). Demo runs locally with `make sam-invoke`.
+
+Parameters:
+  MockLlm:
+    Type: String
+    Default: "1"
+    Description: 1 = scripted model, no LLM API calls
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    Timeout: 60
+    MemorySize: 1024
+
+Resources:
+  KabadiKhataApi:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src
+      Handler: api.lambda_entry.handler
+      Environment:
+        Variables:
+          MOCK_LLM: !Ref MockLlm
+          # Lambda can only write to /tmp
+          KK_DB_PATH: /tmp/kk.db
+          KK_PHOTO_DIR: /tmp/photos
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+Outputs:
+  ApiUrl:
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

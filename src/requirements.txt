@@ -1,0 +1,6 @@
+# Lambda dependencies for `sam build` (template.yaml, CodeUri: src). Keep in step with pyproject.toml.
+pydantic>=2.6
+strands-agents[gemini]>=1.50
+fastapi>=0.115
+mangum>=0.19
+opensearch-py>=2.7

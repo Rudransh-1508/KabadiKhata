@@ -3,6 +3,7 @@
 This repo is our entry for **Environmental Hacks** (WeMakeDevs × AWS Bharat Builds Tour), **Waste and Energy track**.
 - **Plan:** [`research/KABADI_KHATA_SCOPED_DOWN.md`](research/KABADI_KHATA_SCOPED_DOWN.md). Follow it for scope, owners and timeline.
 - **2-day priorities:** [`research/TWO_DAY_SCOPE.md`](research/TWO_DAY_SCOPE.md). Read it first — it sets what to build in what order when time is short.
+- **Vocabulary:** [`CONTEXT.md`](CONTEXT.md). Use its terms in code, UI and the video (e.g. **Certificate**, never "Claim").
 - **This file:** the rules every change must follow, plus the fixes from our plan review. Where the plan and this file disagree, **this file wins**.
 
 ## What we're building (one paragraph)
@@ -15,10 +16,10 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
 3. **Tamper breaks the chain** — edit a receipt → `/verify` shows the broken seq.
 4. **Cedar denial** — brand is denied a kabadiwala's identity; provenance only in aggregate.
 
-**Infra cutoff — Fri 18:00:** if `sam build --use-container` + OpenSearch are not both green, fall back to **FastAPI + SQLite** and keep a `sam local invoke` clip for the "Built on AWS" visual. Strands + Cedar already satisfy the AWS requirement. Do not lose a day to infra.
+**Infra (decided Fri morning, see [`docs/adr/0001-fastapi-sqlite-demo-stack.md`](docs/adr/0001-fastapi-sqlite-demo-stack.md)):** the demo runs on **FastAPI + SQLite**, not SAM + OpenSearch. `template.yaml` plus a `sam local invoke` clip covers the SAM visual; Strands + Cedar satisfy the AWS requirement. Fix #1 (SAM ↔ OpenSearch networking) no longer applies. **OpenSearch is back as a read-only search copy** ([ADR 0002](docs/adr/0002-opensearch-as-read-only-search-copy.md)): SQLite stays the ledger, and nothing in the spine may depend on OpenSearch.
 
 ## Hard constraints
-- **Build It only.** No AWS account, Bedrock, S3, DynamoDB or Cognito. The AWS open-source tools we use: **Strands Agents, Cedar, SAM CLI (`sam local`), OpenSearch.**
+- **Build It only.** No AWS account, Bedrock, S3, DynamoDB or Cognito. The AWS open-source tools we use: **Strands Agents, Cedar, SAM CLI (`sam local invoke`), OpenSearch** (read-only search copy, ADR 0002).
 - **LLM:** Gemini (or OpenAI) through Strands' non-Bedrock model provider. Always pass the model explicitly, because Strands defaults to Bedrock.
 - **Hackathon rules:** no code written before the clock started; repo history must match the event dates; every member commits every day; list the AI coding tools used in the README; credit every dataset, icon and library with its licence.
 - **Never commit secrets.** API keys and the Telegram token live in `.env` (gitignored). `.env.example` has placeholders only.
@@ -33,7 +34,7 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
 ## Required fixes (from the plan review). Every one must be in the code.
 
 ### Fixes that will otherwise break the build
-1. **SAM ↔ OpenSearch networking.** Lambda containers cannot reach `localhost:9200`.
+1. ~~**SAM ↔ OpenSearch networking.**~~ *Obsolete since ADR 0001 (no OpenSearch). Kept for history.* Lambda containers cannot reach `localhost:9200`.
    - Run `sam local start-api --docker-network <compose network name> --warm-containers EAGER`.
    - Read the OpenSearch host from env (`OPENSEARCH_HOST`): `opensearch:9200` inside SAM, `localhost:9200` for scripts and tests on the host.
    - Fallback: `host.docker.internal:9200`.
@@ -46,7 +47,7 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
        MemorySize: 1024
        Runtime: python3.12
    ```
-   Build with `sam build --use-container`; we're on Windows and cedarpy needs Linux wheels. Keep a single collection request under ~25 s end to end, so it would also survive a real API Gateway's 29 s limit.
+   Build with `sam build --use-container` so cedarpy gets Linux wheels. The demo machine is an Apple Silicon Mac, so also set `Architectures: [arm64]` (x86 containers run under slow emulation). Keep a single collection request under ~25 s end to end, so it would also survive a real API Gateway's 29 s limit.
 3. **Telegram voice notes are OGG/Opus.**
    - Convert to WAV (16 kHz mono) or MP3 **in the bot process on the laptop** (`pydub` plus a system ffmpeg) before calling `POST /collections`. The Lambda container has no ffmpeg.
    - Resize photos to ≤1024 px on the long side before base64-encoding.
@@ -68,7 +69,7 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
    - The rate-card price stays, labelled **"indicative"**. It is not the pitch.
    - Say "WhatsApp in production; Telegram for the prototype" in the README and the video.
 8. **Pitch line must match the source.** Use exactly:
-   > *"In 2024, CPCB audits of four plastic recyclers turned up 6 lakh fake recycling (EPR) certificates."*
+   > *"In 2024, the NGT took up CPCB's finding of 6 lakh fake recycling (EPR) certificates from four plastic recyclers."*
    - Source: https://www.scconline.com/blog/post/2024/07/31/ngt-issues-notice-cpcb-moefcc-recovery-of-6-lakh-fake-epr-certificates-from-plastic-recycling-companies/ (NGT notice; news item dated July 2024).
    - Do **not** claim an audit year, that brands "held" the certificates, a tonnage, or a fine amount unless another cited source states it.
    - Do **not** call it a 2026 scandal.
@@ -76,19 +77,21 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
 9. **Video trim.** Fold the "मेरा हिसाब" shot into the phone-flow segment. Show the architecture as a ~10-second overlay, not a separate slide. Give the time saved to the tamper demo and the Recycler C flag.
 
 ### Smaller implementation notes
-- **Cedar entity references:** `Receipt.collector` and `Certificate.buyer` must be **entity references** (`Actor::"<id>"`), not plain `collector_id` strings. Otherwise `resource.collector == principal` never matches. Build the entities from the OpenSearch documents in `authz.py`.
+- **Cedar entity references:** `Receipt.collector` and `Certificate.buyer` must be **entity references** (`Actor::"<id>"`), not plain `collector_id` strings. Otherwise `resource.collector == principal` never matches. Build the entities from the SQLite store (`ledger.store.Store`) in `authz.py`; the OpenSearch copy is never an authority.
 - Cedar policies are default deny. Every API handler calls `is_allowed(principal, action, resource, context)` **before** touching data, and returns HTTP 403 with `{"denied_by": "cedar", "action": ...}`. The console renders this as the red "Denied by Cedar policy" banner.
 - Hash chain: canonical JSON (sorted keys, fixed float format, UTC ISO timestamps). `prev_hash = "GENESIS"` for seq 0. `verify(collector_id)` returns the first broken seq.
 - Perceptual hash duplicate check: compare Hamming distance in Python against stored hashes (fine at ~1,000 receipts). The threshold is tuned on edited copies of our own photos.
 - Builder Center blog: do it after a safe submission (18:00–20:00 on Day 3). It's a separate prize, so it's worth an hour if time allows.
 
 ## Commands
-- `make up` starts OpenSearch and creates the indices
-- `make seed` loads the synthetic world
-- `make api` runs `sam build --use-container` then `sam local start-api`
+- `make up` / `make down` start and stop OpenSearch (optional; Docker)
+- `make seed` creates the SQLite database, loads the synthetic world and copies it to OpenSearch if it's up
+- `make reindex` rebuilds the OpenSearch copy from SQLite
+- `make api` runs the FastAPI app
+- `make sam-invoke` runs `sam build --use-container` then `sam local invoke` on a fixture (for the video)
 - `make bot` and `make console`
 - `make test`
-- `make demo` runs everything above in order. **It must work from a fresh clone in ≤ 10 minutes.**
+- `make demo` runs everything above in order (OpenSearch is skipped if Docker isn't running). **It must work from a fresh clone in ≤ 10 minutes.**
 
 ## Definition of done for any feature
 It runs end to end on the real stack (not just in a unit test), it has at least one test, synthetic data is labelled, nothing secret is committed, and it appears in the demo script. Otherwise it waits.

@@ -1,0 +1,35 @@
+{
+  "resource": "/{proxy+}",
+  "path": "/collections",
+  "httpMethod": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Principal": "kw-raju"
+  },
+  "multiValueHeaders": {
+    "Content-Type": [
+      "application/json"
+    ],
+    "X-Principal": [
+      "kw-raju"
+    ]
+  },
+  "queryStringParameters": null,
+  "multiValueQueryStringParameters": null,
+  "pathParameters": {
+    "proxy": "collections"
+  },
+  "stageVariables": null,
+  "requestContext": {
+    "resourcePath": "/{proxy+}",
+    "httpMethod": "POST",
+    "path": "/Prod/collections",
+    "stage": "Prod",
+    "requestId": "demo",
+    "identity": {
+      "sourceIp": "127.0.0.1"
+    }
+  },
+  "body": "{\"collector_id\": \"kw-raju\", \"photo_b64\": \"Zml4dHVyZToxMjpQRVQ6MC45MjpzYW0=\", \"taps\": {\"material\": \"PET\", \"kg\": 12}, \"locality\": \"Seelampur\"}",
+  "isBase64Encoded": false
+}

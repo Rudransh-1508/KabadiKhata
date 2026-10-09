@@ -20,11 +20,12 @@ This merges [`CLAUDE.md`](../CLAUDE.md) (rules and fixes #1–#9), [`TWO_DAY_SCO
 4. **Cedar denial:** the brand is denied a kabadiwala's identity; provenance is shown only in aggregate.
 
 ## Two decisions that keep four people from blocking each other
-1. **Storage sits behind one interface (`src/ledger/store.py`).** P3 ships the **SQLite implementation first, by Fri 11:30**, so P2, P4 and P1 build against something that works on day one. The OpenSearch implementation is attempted in parallel. Switching backends is a config flag, not a rewrite.
-2. **Infra cutoff, Fri 18:00, called by P3.**
-   - If **SAM (`sam build --use-container`) and OpenSearch are both green**, use the SAM API on the OpenSearch store.
-   - **If not, use FastAPI plus SQLite.** Keep `template.yaml` and record one `sam local invoke` clip for the "Built on AWS" visual. Strands and Cedar carry the AWS requirement either way.
-   - P3 posts the decision in the team chat at 18:00 sharp.
+1. **Storage sits behind one interface (`src/ledger/store.py`).** P3 ships the **SQLite implementation by Fri 11:30**, so P2, P4 and P1 build against something that works on day one.
+2. **Infra decided on Fri morning (no 18:00 cutoff): FastAPI plus SQLite.** The demo machine is a Mac with 8 GB RAM, which can't run OpenSearch, SAM containers, the bot, the console and screen recording together. See [`docs/adr/0001-fastapi-sqlite-demo-stack.md`](../docs/adr/0001-fastapi-sqlite-demo-stack.md).
+   - The API runs as **FastAPI on SQLite**. No OpenSearch.
+   - SAM stays visible: a real `template.yaml` (arm64) wrapping the collection handler, plus one recorded `sam local invoke` clip for the "Built on AWS" visual.
+   - Strands and Cedar carry the AWS requirement.
+   - **Update:** OpenSearch is back as a read-only search copy for the auditor (ADR 0002). The spine never depends on it. **Close the browser before recording**: the demo Mac has little memory to spare.
 
 ---
 
@@ -39,6 +40,7 @@ This merges [`CLAUDE.md`](../CLAUDE.md) (rules and fixes #1–#9), [`TWO_DAY_SCO
 | 1 | `transcribe(wav_b64)` → `{text_hi, claimed_kg, claimed_material}` (input is WAV from the bot, see #3). Handle Hinglish ("baara kilo", "gatta"). | Fri 21:00 if the spine is on track, otherwise Sat 14:00 | 8 of 10 clips give the correct kg | #3 |
 | 1 | **Radar sensitivity sweep:** add fraud scenarios at 1.2×, 1.5× and 3× next to 38×. `eval/radar_eval.py` reports the **smallest ratio caught with zero false flags on honest recyclers**, plus per-rule precision and recall. | Sat 17:00 | A number in `eval/RESULTS.md` | #5 |
 | 1 | `eval/photo_eval.py`: kg accuracy within ±5% and material accuracy **on the 10 held-out photos only**, with n stated | Sat 17:00 | A row in RESULTS.md | #6 |
+| 1 | **"मेरा हिसाब" (my account) income-statement image (moved from P4):** PIL image with name, month, receipt count, kg, ₹, chain verified ✓, QR to the verify endpoint. Framed as proof of income. P4 only wires the bot button to it. | Sat 16:00 | Sent from the bot | #7 |
 | 1 | `phash_check` plus a duplicate-photo ring (10 receipts reusing 3 edited photos) in the seed, which R2 needs | Sat 18:00 | P3's R2 flags the ring | — |
 | 2 | GPU extras **only after M2**: an open-model comparison (local vision model and IndicWhisper vs Gemini) or a small trained material classifier as a second opinion | after Sat 20:00 | Optional | — |
 | Sun | Freeze the cache for demo inputs; record the eval clip; write the README eval section | Sun 13:00 | — | — |
@@ -70,9 +72,8 @@ This merges [`CLAUDE.md`](../CLAUDE.md) (rules and fixes #1–#9), [`TWO_DAY_SCO
 | 0 | Repo layout, `.gitignore`, `.env.example` (placeholders only), Makefile skeleton; contracts with P2 | Fri 10:30 | Everyone has committed once | — |
 | 0 | **`store.py` interface plus the SQLite implementation** | **Fri 11:30** | P2 and P4 unblocked | — |
 | 0 | `chain.py`: canonical JSON (sorted keys, fixed float format, UTC ISO), `compute_hash`, `append`, `verify()` returns the first broken seq | Fri 14:00 | Test: append 100, tamper one, verify finds it | — |
-| 0 | **Infra attempt (in parallel):**<br>• `docker-compose.yml` with OpenSearch (security plugin off, heap 512m, **network named `kk-net`**)<br>• `template.yaml` with `Globals: Timeout 60, MemorySize 1024, python3.12`<br>• `sam build --use-container`<br>• `sam local start-api --docker-network kk-net --warm-containers EAGER`<br>• `OPENSEARCH_HOST` from env (`opensearch:9200` inside SAM, `localhost:9200` on the host) | Fri 18:00 | Both green, or call the fallback | #1, #2 |
-| 0 | **Call the infra cutoff decision** and post it to the team | **Fri 18:00** | Stack decided | — |
-| 0 | API on the chosen stack: `POST /collections`, `GET /receipts?collector_id=` (with monthly totals), `GET /verify/{collector_id}` | Fri 21:00 | `curl` works | — |
+| 0 | **SAM visual:** `template.yaml` with `Globals: Timeout 60, MemorySize 1024, python3.12, Architectures [arm64]` wrapping the collection handler; `sam build --use-container`; one `sam local invoke` with a fixture event | Sat 18:00 | Clip recorded | #2 |
+| 0 | FastAPI app on SQLite: `POST /collections`, `GET /receipts?collector_id=` (with monthly totals), `GET /verify/{collector_id}` | Fri 21:00 | `curl` works | — |
 | 0 | M1 integration with P2 and P4 | Fri 22:00 | Photo → receipt → card on a phone | — |
 | 0 | Radar **R1 mass balance** (claimed vs verified inflow × 0.85) and **R3 chain integrity**; `POST /radar/run`; `POST /flags/{id}/decision`; `GET /provenance/{certificate_id}` (aggregate only, no identities) | Sat 13:00 | Rule tests pass | — |
 | 0 | `make seed` loads P1's world; run radar; Recycler C flagged; A and B clean | Sat 14:00 | Beats 2 and 3 through the API | — |
@@ -91,7 +92,6 @@ This merges [`CLAUDE.md`](../CLAUDE.md) (rules and fixes #1–#9), [`TWO_DAY_SCO
 | 0 | Receipt card (PIL): ID, material, kg, ₹ (labelled indicative), time, short hash, QR; **"SYNTHETIC" watermark** on seeded data | Fri 21:00 | Shows up on the phone | — |
 | 0 | **Streamlit console with two roles.** Auditor: run radar, flags table, R1 inflow-vs-claim bar, R3 broken seq, *Request inspection* / *Dismiss*. Brand: its certificates, aggregate provenance, and a **red "Denied by Cedar policy" banner** on any 403. | Sat 17:00 | Beats 2 and 4 visible | — |
 | 0 | `docs/demo_script.md` with the **exact pitch line from #8** and the **#9 trim**. Run M2 as a timed run on the real system. | Sat 18:00 script; Sat 20:00 run | ≤ 2:55 | #8, #9 |
-| 1 | **"मेरा हिसाब" (my account) income-statement image:** name, month, receipt count, kg, ₹, chain verified ✓, QR to the verify endpoint. Framed as proof of income. | Sat 16:00 | Sent from the bot | #7 |
 | 1 | Brand view: **verified-backed % column plus a badge at ≥ 80%** | Sat 17:00 | Visible | #4 |
 | 1 | Voice in the bot: convert **OGG/Opus to WAV (16 kHz mono)** with pydub and ffmpeg before calling the API | when P1's `transcribe` lands | A voice note works end to end | #3 |
 | 1 | Optional: a 10-second clip of a real kabadiwala's scale and pile, **with consent** | Fri or Sat | Nothing depends on it | — |
@@ -110,7 +110,7 @@ This merges [`CLAUDE.md`](../CLAUDE.md) (rules and fixes #1–#9), [`TWO_DAY_SCO
 | 09:00–10:30 | **ALL:** freeze contracts, create the repo, first commit from everyone, **photo and voice session**, check everyone's Builder Center verification | | | |
 | 10:30–13:30 | labels and split → start `read_photo` | **stub agent by 12:00** → start consistency | **store.py (SQLite) by 11:30** → chain.py | copy, ratecard, localities → bot skeleton |
 | 14:00–18:00 | `read_photo` done by 15:00 → help P2 with tuning | consistency + tests → guarded write | infra attempt (compose, SAM, network, timeout) | bot on the stub + receipt card |
-| **18:00** | **P3 calls the infra cutoff.** Integration check: bot → API → stub agent | | | |
+| **18:00** | Integration check: bot → API → stub agent | | | |
 | 18:30–22:00 | `transcribe` (Tier 1) or start the seed world | wire real `read_photo`, trace table | endpoints on the chosen stack | card polish, refusal message flow |
 | **22:00** | **M1 on a phone.** If it isn't green, everyone stays on M1. | | | |
 
@@ -121,7 +121,7 @@ This merges [`CLAUDE.md`](../CLAUDE.md) (rules and fixes #1–#9), [`TWO_DAY_SCO
 | 12:00–12:30 | — | **pair:** Cedar into every handler | **pair** | — |
 | 12:30–14:00 | — | flag decisions + template notes | `make seed`, radar end to end | console: brand view + denial banner |
 | **14:00** | **Spine check: beats 1–4 on the real stack.** If any beat fails, everyone works on it before starting Tier 1. | | | |
-| 14:00–18:00 | sensitivity sweep, held-out eval, phash ring | LLM explainer, voice into consistency | verified-backed %, R2 | income-statement image, backed-% column, demo script |
+| 14:00–18:00 | sensitivity sweep, held-out eval, phash ring, income-statement image | LLM explainer, voice into consistency | verified-backed %, R2 | backed-% column, demo script |
 | 18:00–20:00 | RESULTS.md | injection test | `make demo` on the second laptop | OGG→WAV voice, rehearsal prep |
 | **20:00** | **M2: full timed run of the video script.** Bug list with an owner for each. *(If at DTU, the 19:00 showcase is this rehearsal.)* | | | |
 | 20:30–22:30 | fix bugs | fix bugs | fix bugs | fix bugs, finalise the script |
@@ -144,7 +144,6 @@ This merges [`CLAUDE.md`](../CLAUDE.md) (rules and fixes #1–#9), [`TWO_DAY_SCO
 4. R2 duplicate rule
 5. LLM explainer (use the template text)
 6. Voice (taps only)
-7. OpenSearch (switch to SQLite)
 
 **Never cut:** any of the 4 spine beats, Cedar, or R1 mass balance.
 
