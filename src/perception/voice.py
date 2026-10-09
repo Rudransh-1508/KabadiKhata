@@ -15,8 +15,6 @@ version + model, MOCK_LLM=1 replays the cache or falls back to the stub, fixture
 """
 from __future__ import annotations
 
-import base64
-import binascii
 import hashlib
 import json
 import logging
@@ -27,7 +25,10 @@ from agent import stub_tools
 from common import config, jsoncache
 from common.models import MATERIALS, Transcript
 from perception.hinglish import stated_kg, stated_material
-from perception.photo import _gemini_client  # one shared client per key and timeout
+from perception._shared import decode_b64 as _decode
+from perception._shared import gemini_client as _gemini_client
+from perception._shared import strip_fences as _strip_fences
+from perception._shared import to_float as _float
 
 log = logging.getLogger(__name__)
 
@@ -120,31 +121,6 @@ def parse_answer(text: str) -> Transcript:
     material = stated_material(words) or obj.get("stated_material")
     material = material if material in MATERIALS else None
     return Transcript(text_hi=words, claimed_kg=kg, claimed_material=material)
-
-
-def _float(v) -> Optional[float]:
-    if isinstance(v, bool):
-        return None
-    try:
-        f = float(v)
-    except (TypeError, ValueError):
-        return None
-    return f if f == f and f not in (float("inf"), float("-inf")) else None
-
-
-def _strip_fences(text: str) -> str:
-    t = (text or "").strip()
-    if t.startswith("```"):
-        t = t.split("\n", 1)[1] if "\n" in t else ""
-        t = t.rsplit("```", 1)[0]
-    return t.strip()
-
-
-def _decode(audio_b64: str) -> Optional[bytes]:
-    try:
-        return base64.b64decode(audio_b64 or "", validate=False)
-    except (binascii.Error, ValueError, TypeError):
-        return None
 
 
 def _mime(raw: bytes) -> str:
