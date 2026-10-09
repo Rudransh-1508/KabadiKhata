@@ -18,6 +18,7 @@ ConversationHandler): need_name -> need_locality -> ready -> choosing_material
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import functools
 import io
@@ -26,6 +27,7 @@ import logging
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 from PIL import Image
@@ -53,6 +55,18 @@ LOCALITIES = json.loads((REPO_ROOT / "data" / "localities.json").read_text(encod
 KEYPAD_ROWS = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], [".", "0", "back"]]
 MAX_BUF = 6
 _KG_RE = re.compile(r"^\d+(\.\d+)?$")
+
+# /demo: a fixture photo the backend's deterministic read_photo decodes as a
+# 12 kg PET reading (stub_tools fixture format). Entering a different weight then
+# trips the REAL consistency rule with the REAL number — the honest, scripted
+# refusal, and the MOCK_LLM fallback for the live vision path (CLAUDE.md #4).
+# A per-call nonce keeps each demo photo's hash unique, so a repeated /demo still
+# refuses on the weight mismatch rather than the duplicate-photo rule.
+_DEMO_FIXTURE_PREFIX = "fixture:12:PET:0.92"
+
+
+def demo_fixture_photo() -> str:
+    return base64.b64encode(f"{_DEMO_FIXTURE_PREFIX}:{time.time_ns()}".encode()).decode("ascii")
 
 
 # --------------------------------------------------------------------------
@@ -216,8 +230,8 @@ async def hisaab_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not _registered(ud):
         await msg.reply_text(t("need_start"))
         return
-    r = dict(api.hisaab("kab_" + str(update.effective_user.id)))
-    r["name"] = ud["name"]  # override the mock's hardcoded name with the registered name
+    r = dict(await asyncio.to_thread(api.hisaab, "kab_" + str(update.effective_user.id)))
+    r["name"] = ud["name"]  # override the backend's name with the registered name
     await msg.reply_photo(photo=make_hisaab_card(r), caption=t("hisaab_button"))
 
 
@@ -319,6 +333,14 @@ async def locality_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if loc_id not in {l["id"] for l in LOCALITIES}:
         return
     ud["locality"] = loc_id
+    # Register with the backend (real API: PUT /actors; mock: no-op). Best-effort:
+    # a failure here must not block the collector, so log and carry on.
+    try:
+        await asyncio.to_thread(
+            api.register, "kab_" + str(update.effective_user.id), ud["name"], loc_id
+        )
+    except Exception:
+        log.warning("register failed; continuing (collection still works)", exc_info=True)
     await msg.reply_text(t("locality_saved", locality=_locality_name(loc_id)))
     _set_state(ud, "ready")
     _reset_pending(ud)
@@ -388,13 +410,15 @@ async def _do_collect(update: Update, ud: dict, kg: float) -> None:
     simulate = ud.get("simulate_mismatch", False)
     if simulate:
         ud["simulate_mismatch"] = False  # fire once
+    # In demo mode, send the fixture photo so the backend "reads" 12 kg and the
+    # real consistency rule refuses against the actual tapped weight.
+    photo_b64 = demo_fixture_photo() if simulate else pending.get("photo_b64")
     payload = build_payload(
-        update.effective_user.id, ud["locality"], pending["material"], kg, simulate,
-        pending.get("photo_b64"),
+        update.effective_user.id, ud["locality"], pending["material"], kg, simulate, photo_b64,
     )
     await msg.reply_text(t("processing"))
     try:
-        resp = api.collect(payload)  # real client: await asyncio.to_thread(api.collect, payload)
+        resp = await asyncio.to_thread(api.collect, payload)
         status = resp.get("status")
         if status == "receipt":
             card = make_receipt_card(resp["receipt"])
@@ -444,6 +468,15 @@ async def error_handler(update, context: ContextTypes.DEFAULT_TYPE):
 
 def main() -> None:
     load_env(REPO_ROOT / ".env")
+    # Backend: mock by default; KK_USE_MOCK=0 switches to the real HTTP API.
+    # (Done here, after load_env, so .env can set it — and so importing this
+    # module for tests never pulls in httpx or the real client.)
+    if os.environ.get("KK_USE_MOCK", "1") == "0":
+        global api
+        import bot.api_client as api  # noqa: F811  (deliberate backend swap)
+        log.info("backend: real API at %s", api.BASE_URL)
+    else:
+        log.info("backend: mock (set KK_USE_MOCK=0 for the real API)")
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
         print("TELEGRAM_BOT_TOKEN is not set. Put it in the repo-root .env or the environment.")

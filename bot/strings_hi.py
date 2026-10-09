@@ -50,8 +50,8 @@ HI = {
     "voice_soon": "Voice support aa raha hai — abhi button se batao.",
     "bad_weight": "Weight theek nahi laga. Dobara daalo (0–500 kg).",
     "cancelled": "Theek hai, cancel kar diya.",
-    "demo_on": "Demo mismatch: ON",
-    "demo_off": "Demo mismatch: OFF",
+    "demo_on": "Demo ON: agent taraazu par 12 kilo 'dekhega'. Alag weight daalo (jaise 20) to woh refuse karega.",
+    "demo_off": "Demo OFF. Ab asli photo se collection hoga.",
 }
 
 EN = {
@@ -91,8 +91,8 @@ EN = {
     "voice_soon": "Voice support is coming — please use the buttons for now.",
     "bad_weight": "That weight doesn't look right. Enter again (0-500 kg).",
     "cancelled": "Okay, cancelled.",
-    "demo_on": "Demo mismatch: ON",
-    "demo_off": "Demo mismatch: OFF",
+    "demo_on": "Demo ON: the agent will 'see' 12 kg on the scale. Enter a different weight (e.g. 20) to make it refuse.",
+    "demo_off": "Demo OFF. Collections now use the real photo.",
 }
 
 # Material labels shown on the tap-button grid (Hinglish primary).
