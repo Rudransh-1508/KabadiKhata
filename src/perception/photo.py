@@ -10,9 +10,6 @@ else falls back to the stub reading. Fixture payloads ("fixture:...") always go 
 """
 from __future__ import annotations
 
-import base64
-import binascii
-import functools
 import hashlib
 import json
 import logging
@@ -22,6 +19,10 @@ from typing import Optional
 from agent import stub_tools
 from common import config, jsoncache
 from common.models import MATERIALS, PhotoRead
+from perception._shared import decode_b64 as _decode
+from perception._shared import gemini_client as _gemini_client
+from perception._shared import strip_fences as _strip_fences
+from perception._shared import to_float as _float
 
 log = logging.getLogger(__name__)
 
@@ -131,34 +132,8 @@ def to_kg(reading: Optional[float], unit) -> Optional[float]:
     return None  # a unit we don't know is not a reading
 
 
-def _float(v) -> Optional[float]:
-    if isinstance(v, bool):
-        return None
-    try:
-        f = float(v)
-    except (TypeError, ValueError):
-        return None
-    return f if f == f and f not in (float("inf"), float("-inf")) else None
-
-
 def _clamp(v: Optional[float], lo: float, hi: float) -> Optional[float]:
     return None if v is None else max(lo, min(hi, v))
-
-
-def _strip_fences(text: str) -> str:
-    t = (text or "").strip()
-    if t.startswith("```"):
-        t = t.split("\n", 1)[1] if "\n" in t else ""
-        t = t.rsplit("```", 1)[0]
-    return t.strip()
-
-
-def _decode(photo_b64: str) -> Optional[bytes]:
-    try:
-        raw = base64.b64decode(photo_b64 or "", validate=True)
-    except (binascii.Error, ValueError, TypeError):
-        return None
-    return raw or None
 
 
 def _mime(raw: bytes) -> str:
@@ -187,15 +162,6 @@ def _ask_gemini(raw: bytes) -> str:
         ),
     )
     return resp.text or ""
-
-
-@functools.lru_cache(maxsize=4)
-def _gemini_client(api_key: str, timeout_ms: int):
-    """One client (and HTTP connection pool) per key and timeout, reused across calls."""
-    from google import genai
-    from google.genai import types
-
-    return genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms))
 
 
 # ---------- disk cache ----------

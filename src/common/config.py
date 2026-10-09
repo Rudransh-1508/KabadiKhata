@@ -40,3 +40,17 @@ def explain_timeout_s() -> float:
     except ValueError:
         return 20.0
     return v if 0 < v < float("inf") else 20.0
+
+
+def voice_provider() -> str:
+    """Who transcribes voice notes: "sarvam" (Saaras speech-to-text) or "gemini".
+    Unset: Sarvam when a real SARVAM_API_KEY is configured, else Gemini."""
+    chosen = os.getenv("VOICE_PROVIDER", "").strip().lower()
+    if chosen:
+        return chosen
+    key = os.getenv("SARVAM_API_KEY", "").strip()
+    return "sarvam" if key and not key.startswith("your-") else "gemini"
+
+
+def sarvam_stt_model_id() -> str:
+    return os.getenv("SARVAM_STT_MODEL_ID", "saaras:v4")

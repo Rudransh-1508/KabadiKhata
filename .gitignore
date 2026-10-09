@@ -22,3 +22,7 @@ data/photos/
 # P1 eval photos (download with eval/fetch_photos.py)
 data/eval_photos/kabadiwala/
 data/eval_photos/real/
+data/eval_voice/tts/
+data/eval_voice/real/
+data/eval_voice/say/
+data/eval_voice/sarvam/
