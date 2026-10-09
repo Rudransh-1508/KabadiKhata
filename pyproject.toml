@@ -16,7 +16,19 @@ dependencies = [
 [project.optional-dependencies]
 openai = ["strands-agents[openai]>=1.50"]
 dev = ["pytest>=8", "httpx>=0.27", "honcho>=2.0"]
+# Bot (Telegram) + auditor/brand console (Streamlit). Kept out of the core so a
+# backend-only clone stays light; `make install` pulls them in so `make test`
+# runs the whole suite in one env. Mirrors bot/requirements.txt + console/requirements.txt.
+product = [
+    "python-telegram-bot==22.8",
+    "pillow",
+    "qrcode",
+    "pydub",
+    "streamlit",
+    "pandas",
+]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+# "." so the bot/ and console/ packages import in tests; "src" for the backend.
+pythonpath = ["src", "."]
 testpaths = ["tests"]

@@ -9,7 +9,7 @@ endif
 .PHONY: install test api seed demo tamper sam-invoke up down reindex
 
 install: .env
-	uv sync --extra dev
+	uv sync --extra dev --extra product
 
 .env:
 	cp .env.example .env
