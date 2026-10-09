@@ -83,11 +83,15 @@ def transcribe(audio_b64: str) -> Transcript:
         else:
             answer = _ask_gemini(raw)
             result = parse_answer(answer)
+    except KeyError as exc:
+        log.error("transcribe needs %s for VOICE_PROVIDER=%s", exc.args[0] if exc.args else "an API key",
+                  config.voice_provider())
+        return FAILED
     except Exception as exc:  # fail closed: the agent asks a Question
         log.warning("transcribe call failed: %s", type(exc).__name__)
         return FAILED
     if result != FAILED:
-        _cache_put(key, result, answer)
+        _cache_put(key, answer)
     return result
 
 
@@ -134,8 +138,8 @@ def _mime(raw: bytes) -> str:
 
 
 def _ask_gemini(raw: bytes) -> str:
-    if config.llm_provider() != "gemini":
-        raise RuntimeError("transcribe supports LLM_PROVIDER=gemini only")
+    """The Gemini provider (VOICE_PROVIDER=gemini) needs GEMINI_API_KEY, whatever LLM_PROVIDER
+    picks for the agent's chat model."""
     from google.genai import types
 
     client = _gemini_client(os.environ["GEMINI_API_KEY"], int(config.perception_timeout_s() * 1000))
@@ -193,5 +197,5 @@ def _cache_get(key: str) -> Optional[Transcript]:
     return None if result == FAILED else result
 
 
-def _cache_put(key: str, result: Transcript, answer: str) -> None:
+def _cache_put(key: str, answer: str) -> None:
     jsoncache.write_json(_cache_path(key), {"raw_answer": answer, "model": _model_tag()})

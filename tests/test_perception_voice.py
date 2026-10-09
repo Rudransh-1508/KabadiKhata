@@ -179,3 +179,16 @@ def test_cached_answers_are_reparsed_with_todays_parser(monkeypatch):
                    "raw_answer": "ढाई किलो लोहा।", "model": voice._model_tag()}, fh, ensure_ascii=False)
     t = voice.transcribe(b64(raw))
     assert (t.claimed_kg, t.claimed_material) == (2.5, "metal")
+
+
+def test_gemini_voice_works_when_the_agent_uses_openai(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    monkeypatch.setattr(voice, "_ask_gemini", lambda raw: answer("दो किलो लोहा"))
+    assert voice.transcribe(b64(WAV + b"openai team")).claimed_kg == 2.0
+
+
+def test_missing_key_fails_closed(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    assert voice.transcribe(b64(WAV + b"no key")) == voice.FAILED
