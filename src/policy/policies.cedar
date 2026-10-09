@@ -23,7 +23,8 @@ permit (
   principal is Actor in Role::"auditor",
   action in [Action::"read_receipt", Action::"read_receipt_pii", Action::"verify_chain",
              Action::"run_radar", Action::"read_flags", Action::"approve_flag",
-             Action::"read_provenance", Action::"list_actors"],
+             Action::"read_provenance", Action::"list_actors",
+             Action::"search_receipts", Action::"read_analytics"],
   resource
 );
 
@@ -65,6 +66,7 @@ forbid (
   action in [Action::"approve_flag", Action::"issue_certificate", Action::"read_receipt_pii",
              Action::"read_receipt", Action::"read_provenance", Action::"run_radar",
              Action::"verify_chain", Action::"create_collection", Action::"read_flags",
-             Action::"list_actors", Action::"register"],
+             Action::"list_actors", Action::"register",
+             Action::"search_receipts", Action::"read_analytics"],
   resource
 );

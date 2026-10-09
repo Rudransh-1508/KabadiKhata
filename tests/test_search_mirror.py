@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from api.app import app
 from ledger.store import Store
 from ledger.world import load_world, sample_world
+from policy import directory
 from search.mirror import Mirror, SearchUnavailable
 
 URL = "http://localhost:9200"
@@ -42,6 +43,7 @@ def test_ledger_writes_survive_opensearch_being_down(tmp_path):
 
 
 def test_search_endpoints_answer_503_when_the_copy_is_off(tmp_path, monkeypatch):
+    directory.register("au-1", "auditor")  # Cedar fails closed for unknown principals
     monkeypatch.setenv("KK_DB_PATH", str(tmp_path / "kk.db"))
     monkeypatch.setenv("KK_OPENSEARCH_URL", "")
     client = TestClient(app)
@@ -50,6 +52,7 @@ def test_search_endpoints_answer_503_when_the_copy_is_off(tmp_path, monkeypatch)
 
 
 def test_unreachable_search_is_503_not_500(tmp_path, monkeypatch):
+    directory.register("au-1", "auditor")  # Cedar fails closed for unknown principals
     monkeypatch.setenv("KK_DB_PATH", str(tmp_path / "kk.db"))
     monkeypatch.setenv("KK_OPENSEARCH_URL", "http://127.0.0.1:1")
     client = TestClient(app)

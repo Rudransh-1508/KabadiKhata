@@ -229,3 +229,11 @@ def test_api_denies_kabadiwala_reading_another_chain(tmp_path, monkeypatch):
     assert r.json()["denied_by"] == "cedar" and r.json()["reason"]
     r = client.get("/receipts", params={"collector_id": "kw-raju"}, headers={"X-Principal": "brand-1"})
     assert r.status_code == 403
+
+
+@pytest.mark.parametrize("action", ["search_receipts", "read_analytics"])
+def test_search_copy_is_auditor_only(action):
+    index = {"type": "SearchIndex"}
+    assert is_allowed('Actor::"auditor-1"', action, index).allowed
+    for who in ('Actor::"brand-1"', 'Actor::"kw-raju"', 'Actor::"rec-a"', AGENT):
+        assert not is_allowed(who, action, index).allowed

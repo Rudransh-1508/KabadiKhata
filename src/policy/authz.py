@@ -21,7 +21,7 @@ log = logging.getLogger("kk.authz")
 AGENT = 'Agent::"kabadi-agent"'
 _AGENT_ID = "kabadi-agent"
 _AGENT_RE = re.compile(r'^Agent::"([A-Za-z0-9_.:@-]+)"$')
-_RESOURCE_TYPES = {"Receipt", "Chain", "Certificate", "Flag", "Radar", "Photo", "Directory", "Actor"}
+_RESOURCE_TYPES = {"Receipt", "Chain", "Certificate", "Flag", "Radar", "Photo", "Directory", "Actor", "SearchIndex"}
 _REF_ATTR = {"Receipt": "collector", "Chain": "collector", "Certificate": "buyer"}
 
 _POLICY_DIR = Path(__file__).parent
