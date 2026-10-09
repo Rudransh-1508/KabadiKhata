@@ -73,7 +73,18 @@ Rules decide; the LLM only words the result. Flags come from the deterministic r
 
 - `explain(flag)`: a deterministic English and Hindi template. Every number comes from `Flag.facts`.
 - `explain_flag(flag, complete=None, cache_dir=None) -> Explanation(en, hi, source, note)`: asks the LLM to rephrase the template facts and validates the answer.
-- `with_llm_explanation(flag)`: a copy of the Flag with empty explanation text filled in. It never changes the verdict (rule, subject, evidence ids, facts).
+- `with_llm_explanation(flag, store=...)`: what `rules.run()` calls for every Flag. It returns a copy with `facts`, the explanation text and `explanation_source` set. It never changes the verdict (rule, subject, score, evidence ids, status).
+- `derive_facts(flag, store)` in `src/radar/facts.py`: read-only; recomputes the numbers with the rules' own helpers. For R1 it also derives `excluded_tonnes` and `excluded_collector_ids`. If the recomputed ratio does not match the Flag's score, or evidence is missing, the facts are empty and the rule's text stays.
+
+**Which text is shown** (`explanation_source` on the Flag):
+
+1. `"llm"`: a key is set (`GEMINI_API_KEY` or `OPENAI_API_KEY`, per `LLM_PROVIDER`), `MOCK_LLM` is not 1, the call finishes in time and validation passes.
+2. `"template"`: otherwise, when R1 excluded Receipts because a Kabadiwala's Chain is broken. The template then says so, names the Kabadiwalas and tonnes, and tells the Auditor to check the R3 Flag first.
+3. `"rule"`: otherwise, the rule's own text. Without an LLM key this is what the console shows.
+
+A broken Chain stops that Kabadiwala's later Receipts counting as Verified inflow, so an honest Recycler that bought from them can be flagged by R1. The tonnes are as currently recorded: the tamper tool can edit weight, material and Recycler on a Receipt, so check the R3 Flag. `facts` and `explanation_source` are not persisted by the store (only the two text columns), so after `POST /radar/run` the stored Flag has the text but not the facts or source.
+
+With a key set, `facts` (Recycler name, Kabadiwala ids, tonnes) go to the LLM provider and the disk cache. Ids are pseudonymous and the demo data is synthetic. Flags stay readable only by the Auditor (Cedar `read_flags`). An uncached LLM call can take up to `LLM_EXPLAIN_TIMEOUT_S` per Flag inside `POST /radar/run`; the cache makes reruns instant, so warm it before recording.
 
 **Fallback ladder.** The result falls back to the template (`source == "template"`, with the reason in `note`) when:
 

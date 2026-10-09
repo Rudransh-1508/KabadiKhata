@@ -235,5 +235,5 @@ def test_radar_run_explains_flags(tmp_path, monkeypatch):
     assert flags and all(f.explanation_en and f.explanation_hi for f in flags)
 
     raw = rules.r1_mass_balance(store, rules.verified_receipts(store))
-    assert [(f.rule, f.subject_id, f.evidence_ids, f.facts) for f in flags] == \
-           [(f.rule, f.subject_id, f.evidence_ids, f.facts) for f in raw]
+    verdict = lambda f: (f.rule, f.subject_id, f.score, f.evidence_ids, f.status)  # noqa: E731
+    assert [verdict(f) for f in flags] == [verdict(f) for f in raw]
