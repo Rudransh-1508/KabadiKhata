@@ -76,11 +76,19 @@ def phash_check(photo_b64: str, store: ReceiptStore) -> PhashResult:
     return PhashResult(phash=phash, is_duplicate=hit is not None, nearest_receipt_id=hit)
 
 
+def _rate_of(entry) -> float:
+    """Accept either a flat number (placeholder) or P4's cited ratecard entry
+    ({"inr_per_kg": N, "range": [...], "label": ...}, see data/ratecard.json)."""
+    if isinstance(entry, dict):
+        return float(entry.get("inr_per_kg", 0.0))
+    return float(entry)
+
+
 def quote_price(material: str, kg: float) -> PriceQuote:
     rates, source = _PLACEHOLDER_RATES, "placeholder rates (indicative; not real prices)"
     if _RATECARD.exists():
         rates, source = json.loads(_RATECARD.read_text(encoding="utf-8"))["rates"], "ratecard v1 (indicative)"
-    rate = float(rates.get(material, 0.0))
+    rate = _rate_of(rates.get(material, 0.0))
     return PriceQuote(inr_per_kg=rate, total_inr=round(rate * kg, 2), source=source)
 
 
