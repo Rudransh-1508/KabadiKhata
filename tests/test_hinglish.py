@@ -1,0 +1,40 @@
+import pytest
+
+from perception.hinglish import stated_kg, stated_material
+
+
+@pytest.mark.parametrize("text, kg", [
+    ("baara kilo bottle hai", 12.0),
+    ("12 kg bottle", 12.0),
+    ("12.5 किलो रद्दी", 12.5),
+    ("बारह किलो प्लास्टिक बोतल", 12.0),
+    ("dedh kilo panni", 1.5),
+    ("dhai kilo loha", 2.5),
+    ("saadhe teen kilo gatta", 3.5),
+    ("sawa paanch kilo", 5.25),
+    ("paune das kilo raddi", 9.75),
+    ("साढ़े सात किलो अख़बार", 7.5),
+    ("bees kilo hai bhaiya", 20.0),
+])
+def test_stated_kg(text, kg):
+    assert stated_kg(text) == kg
+
+
+@pytest.mark.parametrize("text", ["", "bottle hai", "teen bori gatta", "kilo"])
+def test_no_weight_means_none(text):
+    assert stated_kg(text) is None
+
+
+@pytest.mark.parametrize("text, material", [
+    ("baara kilo bottle", "PET"),
+    ("dedh kilo panni", "LDPE_film"),
+    ("saadhe teen kilo gatta", "cardboard"),
+    ("paanch kilo raddi akhbaar", "paper"),
+    ("dhai kilo loha", "metal"),
+    ("purane charger aur taar", "ewaste"),
+    ("mila jula plastic", "mixed_plastic"),
+    ("बारह किलो प्लास्टिक बोतल", "PET"),
+    ("das kilo maal", None),
+])
+def test_stated_material(text, material):
+    assert stated_material(text) == material
