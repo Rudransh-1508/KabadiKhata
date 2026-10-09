@@ -163,3 +163,17 @@ def test_sarvam_call_has_a_timeout(monkeypatch):
     monkeypatch.setenv("PERCEPTION_TIMEOUT_S", "12")
     assert voice._ask_sarvam(WAV) == "दो किलो लोहा"
     assert seen["timeout"] == 12.0
+
+
+def test_cached_answers_are_reparsed_with_todays_parser(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "1")
+    monkeypatch.setenv("VOICE_PROVIDER", "sarvam")
+    raw = WAV + b"cached"
+    path = voice._cache_path(voice._cache_key(raw))
+    import os
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:  # an entry written before a parser fix
+        json.dump({"result": {"text_hi": "x", "claimed_kg": None, "claimed_material": None},
+                   "raw_answer": "ढाई किलो लोहा।", "model": voice._model_tag()}, fh, ensure_ascii=False)
+    t = voice.transcribe(b64(raw))
+    assert (t.claimed_kg, t.claimed_material) == (2.5, "metal")

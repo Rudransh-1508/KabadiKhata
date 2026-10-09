@@ -205,11 +205,15 @@ def _cache_path(key: str) -> str:
 
 
 def _cache_get(key: str) -> Optional[Transcript]:
+    """Replay the model's stored answer through today's parser, so parser fixes reach cached clips."""
     try:
         with open(_cache_path(key), encoding="utf-8") as fh:
-            return Transcript(**json.load(fh)["result"])
+            entry = json.load(fh)
+        answer, model = entry["raw_answer"], entry.get("model", "")
     except (OSError, ValueError, KeyError, TypeError):
         return None
+    result = from_transcript(answer) if model.startswith("sarvam:") else parse_answer(answer)
+    return None if result == FAILED else result
 
 
 def _cache_put(key: str, result: Transcript, answer: str) -> None:
