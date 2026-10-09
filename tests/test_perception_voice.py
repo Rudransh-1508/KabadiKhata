@@ -19,6 +19,8 @@ def isolated_cache(tmp_path, monkeypatch):
     monkeypatch.setenv("KK_CACHE_DIR", str(tmp_path))
     monkeypatch.setenv("LLM_PROVIDER", "gemini")
     monkeypatch.setenv("VOICE_PROVIDER", "gemini")
+    from perception import photo
+    photo._gemini_client.cache_clear()
 
 
 def answer(text, kg=None, material=None) -> str:

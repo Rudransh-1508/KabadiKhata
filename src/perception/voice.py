@@ -21,13 +21,13 @@ import hashlib
 import json
 import logging
 import os
-import tempfile
 from typing import Optional
 
 from agent import stub_tools
-from common import config
+from common import config, jsoncache
 from common.models import MATERIALS, Transcript
 from perception.hinglish import stated_kg, stated_material
+from perception.photo import _gemini_client  # one shared client per key and timeout
 
 log = logging.getLogger(__name__)
 
@@ -160,13 +160,9 @@ def _mime(raw: bytes) -> str:
 def _ask_gemini(raw: bytes) -> str:
     if config.llm_provider() != "gemini":
         raise RuntimeError("transcribe supports LLM_PROVIDER=gemini only")
-    from google import genai
     from google.genai import types
 
-    client = genai.Client(
-        api_key=os.environ["GEMINI_API_KEY"],
-        http_options=types.HttpOptions(timeout=int(config.perception_timeout_s() * 1000)),
-    )
+    client = _gemini_client(os.environ["GEMINI_API_KEY"], int(config.perception_timeout_s() * 1000))
     resp = client.models.generate_content(
         model=config.gemini_model_id(),
         contents=[types.Part.from_bytes(data=raw, mime_type=_mime(raw)), USER_PROMPT],
@@ -213,24 +209,13 @@ def _cache_path(key: str) -> str:
 
 def _cache_get(key: str) -> Optional[Transcript]:
     """Replay the model's stored answer through today's parser, so parser fixes reach cached clips."""
-    try:
-        with open(_cache_path(key), encoding="utf-8") as fh:
-            entry = json.load(fh)
-        answer, model = entry["raw_answer"], entry.get("model", "")
-    except (OSError, ValueError, KeyError, TypeError):
+    entry = jsoncache.read_json(_cache_path(key))
+    if not entry or not isinstance(entry.get("raw_answer"), str):
         return None
+    answer, model = entry["raw_answer"], str(entry.get("model", ""))
     result = from_transcript(answer) if model.startswith("sarvam:") else parse_answer(answer)
     return None if result == FAILED else result
 
 
 def _cache_put(key: str, result: Transcript, answer: str) -> None:
-    try:
-        path = _cache_path(key)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump({"result": result.model_dump(), "raw_answer": answer, "model": _model_tag()},
-                      fh, ensure_ascii=False)
-        os.replace(tmp, path)
-    except OSError as exc:
-        log.warning("transcribe cache write failed: %s", type(exc).__name__)
+    jsoncache.write_json(_cache_path(key), {"raw_answer": answer, "model": _model_tag()})
