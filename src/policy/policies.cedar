@@ -22,9 +22,33 @@ permit (
 permit (
   principal is Actor in Role::"auditor",
   action in [Action::"read_receipt", Action::"read_receipt_pii", Action::"verify_chain",
-             Action::"run_radar", Action::"approve_flag", Action::"read_provenance"],
+             Action::"run_radar", Action::"read_flags", Action::"approve_flag",
+             Action::"read_provenance", Action::"list_actors"],
   resource
 );
+
+// 3b. Kabadiwala: may read a Photo by its sha256 (the unguessable hash is the capability) and
+// list the directory for the bot. Brands get neither.
+@id("kabadiwala-photo")
+permit (
+  principal is Actor in Role::"kabadiwala",
+  action == Action::"read_receipt_pii",
+  resource is Photo
+);
+@id("kabadiwala-list-directory")
+permit (
+  principal is Actor in Role::"kabadiwala",
+  action == Action::"list_actors",
+  resource is Directory
+);
+
+// 3c. Any known Actor may register only itself; the API refuses to change a non-Kabadiwala.
+@id("self-registration")
+permit (
+  principal is Actor,
+  action == Action::"register",
+  resource is Actor
+) when { resource == principal };
 
 // 4. Agent: its one write, and only after the consistency check passed.
 @id("agent-create-receipt")
@@ -40,6 +64,7 @@ forbid (
   principal == Agent::"kabadi-agent",
   action in [Action::"approve_flag", Action::"issue_certificate", Action::"read_receipt_pii",
              Action::"read_receipt", Action::"read_provenance", Action::"run_radar",
-             Action::"verify_chain", Action::"create_collection"],
+             Action::"verify_chain", Action::"create_collection", Action::"read_flags",
+             Action::"list_actors", Action::"register"],
   resource
 );

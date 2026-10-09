@@ -9,10 +9,15 @@ entity Chain { collector?: Actor };
 entity Certificate { buyer?: Actor };
 entity Flag;
 entity Radar;
+entity Photo;
+entity Directory;
 
 action create_collection appliesTo { principal: [Actor, Agent], resource: [Chain], context: {} };
 action read_receipt appliesTo { principal: [Actor, Agent], resource: [Chain, Receipt], context: {} };
-action read_receipt_pii appliesTo { principal: [Actor, Agent], resource: [Receipt, Chain], context: {} };
+action read_receipt_pii appliesTo { principal: [Actor, Agent], resource: [Receipt, Chain, Photo], context: {} };
+action read_flags appliesTo { principal: [Actor, Agent], resource: [Radar], context: {} };
+action list_actors appliesTo { principal: [Actor, Agent], resource: [Directory], context: {} };
+action register appliesTo { principal: [Actor, Agent], resource: [Actor], context: {} };
 action verify_chain appliesTo { principal: [Actor, Agent], resource: [Chain], context: {} };
 action create_receipt appliesTo {
   principal: [Actor, Agent],

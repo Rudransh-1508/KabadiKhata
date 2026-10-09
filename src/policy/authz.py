@@ -21,7 +21,7 @@ log = logging.getLogger("kk.authz")
 AGENT = 'Agent::"kabadi-agent"'
 _AGENT_ID = "kabadi-agent"
 _AGENT_RE = re.compile(r'^Agent::"([A-Za-z0-9_.:@-]+)"$')
-_RESOURCE_TYPES = {"Receipt", "Chain", "Certificate", "Flag", "Radar"}
+_RESOURCE_TYPES = {"Receipt", "Chain", "Certificate", "Flag", "Radar", "Photo", "Directory", "Actor"}
 _REF_ATTR = {"Receipt": "collector", "Chain": "collector", "Certificate": "buyer"}
 
 _POLICY_DIR = Path(__file__).parent
@@ -56,8 +56,12 @@ def _uid(type_: str, id_: str) -> dict:
     return {"type": type_, "id": id_}
 
 
-def _principal(principal: str) -> tuple[dict, str, list[dict]] | str:
-    """(uid, role, parents) for a known principal, or a denial reason string."""
+def _principal(principal: str, action: str = "") -> tuple[dict, str, list[dict]] | str:
+    """(uid, role, parents) for a known principal, or a denial reason string.
+
+    Only `register` accepts a principal not yet in the directory: a new Kabadiwala signing up
+    from the bot. The self-registration policy still restricts it to its own Actor.
+    """
     if principal == AGENT:
         return _uid("Agent", _AGENT_ID), "agent", []
     if not isinstance(principal, str):
@@ -70,6 +74,8 @@ def _principal(principal: str) -> tuple[dict, str, list[dict]] | str:
     if role is None:
         directory.refresh()
         role = directory.role_of(actor_id)
+    if role is None and action == "register":
+        role = "kabadiwala"
     if role is None:
         return "unknown principal"
     return _uid("Actor", actor_id), role, [_uid("Role", role)]
@@ -85,7 +91,7 @@ def _evaluate(principal: str, action: str, resource: dict, context: dict | None)
     if not isinstance(action, str) or action not in actions:
         return _deny(f"unknown action {action!r}")
 
-    who = _principal(principal)
+    who = _principal(principal, action)
     if isinstance(who, str):
         return _deny(who)
     p_uid, role, parents = who
@@ -116,6 +122,11 @@ def _evaluate(principal: str, action: str, resource: dict, context: dict | None)
     entities[(p_uid["type"], p_uid["id"])] = {"uid": p_uid, "attrs": {}, "parents": parents}
     if parents:
         entities[("Role", role)] = {"uid": parents[0], "attrs": {}, "parents": []}
+    if rtype == "Actor":  # the API passes the reference form Actor::"<id>" as the id
+        m = directory.ACTOR_UID_RE.match(rid)
+        if not m:
+            return _deny("malformed resource id")
+        rid = m.group(1)
     r_uid = _uid(rtype, rid)
     entities[(rtype, rid)] = {"uid": r_uid, "attrs": attrs, "parents": []}
 
