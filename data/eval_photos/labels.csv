@@ -24,7 +24,7 @@ kw_55.png,kaggle_ai,tune,metal,,,hanging_dial,
 kw_6.png,kaggle_ai,tune,unknown,,,hanging_dial,glass bottles: no glass label in Material
 kw_66.png,kaggle_ai,tune,unknown,,,hanging_dial,glass bottles: no glass label in Material
 kw_7.png,kaggle_ai,tune,metal,,,hanging_dial,
-kw_77.png,kaggle_ai,tune,HDPE,,,hanging_dial,
+kw_77.png,kaggle_ai,heldout,HDPE,,,hanging_dial,
 kw_8.png,kaggle_ai,tune,paper,,,hanging_dial,
 kw_88.png,kaggle_ai,tune,metal,,,hanging_dial,
 kw_9.png,kaggle_ai,heldout,mixed_plastic,,,hanging_dial,
