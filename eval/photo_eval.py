@@ -5,18 +5,26 @@
 
 Photos are resized to <=1024 px on the long side first, as the bot does (CLAUDE.md #3), so the
 model sees what it sees in production. Answers are cached (.cache/photo), so re-runs are free.
+Uncached calls are paced (EVAL_PAUSE_S) for the free tier, and a call that got no usable answer
+(quota, timeout) is reported as a model error, never scored as a wrong reading or a refusal.
 Writes eval/RESULTS_photo_<split>.md.
 """
 import argparse
 import base64
 import csv
 import io
+import os
 import sys
+import time
 from pathlib import Path
 
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from _env import load_env  # noqa: E402
+
+load_env()
+from perception import photo  # noqa: E402
 from perception.photo import read_photo  # noqa: E402
 
 LABELS = Path("data/eval_photos/labels.csv")
@@ -24,14 +32,19 @@ SET_DIRS = {"kaggle_ai": Path("data/eval_photos/kabadiwala"), "real": Path("data
 SET_NAMES = {"kaggle_ai": "AI-generated kabadi scale photos (synthetic; kaggle.com/datasets/oneshikaaa/kabadiwala, Apache-2.0)",
              "real": "Real phone photos taken by the team"}
 KG_TOLERANCE = 0.05
+PAUSE_S = float(os.getenv("EVAL_PAUSE_S", "6"))  # free tier: about 10 model calls a minute
 
 
-def as_bot_sends(path: Path) -> str:
+def as_bot_sends(path: Path) -> bytes:
     im = Image.open(path).convert("RGB")
     im.thumbnail((1024, 1024))
     buf = io.BytesIO()
     im.save(buf, format="JPEG", quality=90)
-    return base64.b64encode(buf.getvalue()).decode()
+    return buf.getvalue()
+
+
+def _cached(raw: bytes) -> bool:
+    return os.path.exists(photo._cache_path(photo._cache_key(raw)))
 
 
 def main() -> int:
@@ -64,9 +77,17 @@ def _by_set(rows: list[dict]) -> dict[str, list[dict]]:
 
 
 def _score(set_id: str, rows: list[dict]) -> list[str]:
-    lines, kg_ok, kg_n, refuse_ok, refuse_n, mat_ok = [], 0, 0, 0, 0, 0
+    lines, kg_ok, kg_n, refuse_ok, refuse_n, mat_ok, errors = [], 0, 0, 0, 0, 0, 0
     for r in rows:
-        got = read_photo(as_bot_sends(SET_DIRS[set_id] / r["file"]))
+        raw = as_bot_sends(SET_DIRS[set_id] / r["file"])
+        was_cached = _cached(raw)
+        got = read_photo(base64.b64encode(raw).decode())
+        if not was_cached:
+            time.sleep(PAUSE_S)
+        if not _cached(raw):  # only a usable model answer is cached: this was a model error (quota, timeout)
+            errors += 1
+            lines.append(f"| {r['file']} | {r['true_kg'] or '-'} | (model error) | | {r['true_material']} | | |")
+            continue
         mat_hit = got.material == r["true_material"]
         mat_ok += mat_hit
         if r["readable"] == "yes":
@@ -87,15 +108,17 @@ def _score(set_id: str, rows: list[dict]) -> list[str]:
     def pct(a, b):
         return f"{a}/{b} ({100 * a / b:.0f}%)" if b else "n/a"
 
+    scored = len(rows) - errors
     return [
         f"## {set_id}",
         "",
         f"Data: {SET_NAMES.get(set_id, set_id)}, labelled by a person.",
         "",
+        *([f"- Model errors (not scored; run again to retry): {errors}"] if errors else []),
         f"- **kg within ±5%:** {pct(kg_ok, kg_n)} readable photos",
         f"- **Refused unreadable photos:** {pct(refuse_ok, refuse_n)}",
-        f"- **Material correct:** {pct(mat_ok, len(rows))}",
-        f"- n = {len(rows)} photos",
+        f"- **Material correct:** {pct(mat_ok, scored)}",
+        f"- n = {scored} photos scored",
         "",
         "| file | true kg | read kg | confidence | true material | read material | result |",
         "|---|---|---|---|---|---|---|",
