@@ -27,6 +27,7 @@ from perception.hinglish import stated_kg, stated_material
     ("dedh sau kilo", 150.0),
     ("ek hazaar kilo", 1000.0),
     ("teen chaar kilo", 4.0),
+    ("तीस किलो लोहा।", 30.0),
     ("डेढ़ किलो पुराने मोबाइल चार्जर", 1.5),
     ("साढे सात किलो", 7.5),
     ("\u0921\u0947\u095d \u0915\u093f\u0932\u094b", 1.5),  # डेढ़ with the one-character ढ़
@@ -58,6 +59,12 @@ def test_no_weight_means_none(text):
     ("सात किलो स्टील के बर्तन", "metal"),
     ("चालीस किलो रद्दी कागज़", "paper"),
     ("डेढ़ किलो पुराने मोबाइल चार्जर", "ewaste"),
+    ("ढाई किलो लोहा।", "metal"),                 # Sarvam ends sentences with a danda
+    ("12 किलो बोतलें।", "PET"),
+    ("बॉटल है सब।", "PET"),
+    ("ठीक है जी, 9 किलो प्लास्टिक बोतल।", "PET"),
+    ("चालीस किलो रदी कागज़।", "paper"),
+    ("दो किलो पॉलिथीन की थैली।", "LDPE_film"),
 ])
 def test_stated_material(text, material):
     assert stated_material(text) == material

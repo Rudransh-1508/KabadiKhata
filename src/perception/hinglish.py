@@ -34,10 +34,10 @@ _THOUSAND = {"hazaar", "hazar", "हज़ार", "हजार"}
 
 # Order matters: named materials (gatta, raddi) before generic container words (dabba, balti)
 _MATERIALS = [
-    ("PET", ["pet", "bottle", "botal", "बोतल", "bisleri", "बिसलेरी"]),
-    ("LDPE_film", ["panni", "polythene", "polithin", "pannee", "पन्नी", "पॉलीथीन", "thaili", "थैली"]),
+    ("PET", ["pet", "bottle", "bottles", "botal", "बोतल", "बोतलें", "बोतलों", "बॉटल", "बॉटल्स", "bisleri", "बिसलेरी"]),
+    ("LDPE_film", ["panni", "polythene", "polithin", "pannee", "पन्नी", "पॉलीथीन", "पॉलिथीन", "पॉलीथिन", "पोलिथीन", "thaili", "थैली"]),
     ("cardboard", ["gatta", "gatte", "गत्ता", "गत्ते", "cardboard", "carton", "कार्टन", "कार्डबोर्ड"]),
-    ("paper", ["raddi", "akhbaar", "akhbar", "newspaper", "kagaz", "kaagaz", "रद्दी", "अख़बार", "अखबार", "काग़ज़", "कागज"]),
+    ("paper", ["raddi", "akhbaar", "akhbar", "newspaper", "kagaz", "kaagaz", "रद्दी", "रदी", "अख़बार", "अखबार", "काग़ज़", "कागज"]),
     ("HDPE", ["hdpe", "dabba", "dabbe", "डिब्बा", "डिब्बे", "balti", "बाल्टी"]),
     ("metal", ["loha", "lohe", "लोहा", "लोहे", "tin", "टिन", "metal", "aluminium", "steel", "स्टील", "can", "cans",
                "एल्युमिनियम", "एल्यूमीनियम", "कैन", "bartan", "bartano", "बर्तन", "मेटल"]),
@@ -55,7 +55,8 @@ def _norm(word: str) -> str:
 
 
 def _tokens(text: str) -> list[str]:
-    return re.findall(r"[\wऀ-ॿ.]+", _norm(text))
+    # Devanagari letters and signs, but not the danda (।, ॥) that ends a Hindi sentence
+    return re.findall(r"[\w\u0900-\u0963\u0966-\u097F.]+", _norm(text))
 
 
 def stated_kg(text: str) -> Optional[float]:
