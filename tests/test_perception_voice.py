@@ -18,6 +18,7 @@ WAV = b"RIFF\x00\x00\x00\x00WAVEfmt some audio"
 def isolated_cache(tmp_path, monkeypatch):
     monkeypatch.setenv("KK_CACHE_DIR", str(tmp_path))
     monkeypatch.setenv("LLM_PROVIDER", "gemini")
+    monkeypatch.setenv("VOICE_PROVIDER", "gemini")
 
 
 def answer(text, kg=None, material=None) -> str:
@@ -87,3 +88,43 @@ def test_model_failure_fails_closed(monkeypatch):
 @pytest.mark.parametrize("head, mime", [(WAV, "audio/wav"), (b"OggS\x00rest", "audio/ogg"), (b"ID3rest", "audio/mp3")])
 def test_mime_sniffing(head, mime):
     assert voice._mime(head) == mime
+
+
+# ---------- Sarvam provider ----------
+
+def test_sarvam_transcript_is_read_by_code_only(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("VOICE_PROVIDER", "sarvam")
+    monkeypatch.setattr(voice, "_ask_sarvam", lambda raw: "साढ़े तीन किलो गत्ता है")
+    t = voice.transcribe(b64(WAV + b"sarvam"))
+    assert (t.text_hi, t.claimed_kg, t.claimed_material) == ("साढ़े तीन किलो गत्ता है", 3.5, "cardboard")
+
+
+def test_sarvam_empty_transcript_fails_closed_and_is_not_cached(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("VOICE_PROVIDER", "sarvam")
+    calls = []
+    monkeypatch.setattr(voice, "_ask_sarvam", lambda raw: calls.append(1) or "")
+    audio = b64(WAV + b"silence")
+    assert voice.transcribe(audio) == voice.FAILED
+    assert voice.transcribe(audio) == voice.FAILED
+    assert len(calls) == 2  # a failure is retried next time, never replayed
+
+
+def test_providers_cache_separately(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setattr(voice, "_ask_sarvam", lambda raw: "दस किलो लोहा")
+    monkeypatch.setattr(voice, "_ask_gemini", lambda raw: answer("दो किलो लोहा"))
+    audio = b64(WAV + b"both")
+    monkeypatch.setenv("VOICE_PROVIDER", "sarvam")
+    assert voice.transcribe(audio).claimed_kg == 10.0
+    monkeypatch.setenv("VOICE_PROVIDER", "gemini")
+    assert voice.transcribe(audio).claimed_kg == 2.0
+
+
+@pytest.mark.parametrize("key, provider", [("", "gemini"), ("your-sarvam-key", "gemini"), ("sk_real_123", "sarvam")])
+def test_default_provider_follows_the_key(monkeypatch, key, provider):
+    from common import config
+    monkeypatch.delenv("VOICE_PROVIDER", raising=False)
+    monkeypatch.setenv("SARVAM_API_KEY", key)
+    assert config.voice_provider() == provider
