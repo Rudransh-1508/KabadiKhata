@@ -30,6 +30,7 @@ _MODIFIERS = {"saadhe": 0.5, "sade": 0.5, "saade": 0.5, "साढ़े": 0.5, 
               "paune": -0.25, "पौने": -0.25}
 _KG_WORDS = r"(?:kg|kgs|kilo|kilos|kilogram|किलो|केजी)"
 _HUNDRED = {"sau", "सौ"}
+_THOUSAND = {"hazaar", "hazar", "हज़ार", "हजार"}
 
 # Order matters: named materials (gatta, raddi) before generic container words (dabba, balti)
 _MATERIALS = [
@@ -77,25 +78,40 @@ _UNITS = {_norm(k): v for k, v in _UNITS.items()}
 _STANDALONE = {_norm(k): v for k, v in _STANDALONE.items()}
 _MODIFIERS = {_norm(k): v for k, v in _MODIFIERS.items()}
 _HUNDRED = {_norm(k) for k in _HUNDRED}
+_THOUSAND = {_norm(k) for k in _THOUSAND}
+
+
+_DIGITS = re.compile(r"\d+(?:\.\d+)?")
+
+
+def _is_number_word(tok: str) -> bool:
+    return bool(_DIGITS.fullmatch(tok)) or tok in _UNITS or tok in _STANDALONE or tok in _MODIFIERS \
+        or tok in _HUNDRED or tok in _THOUSAND
 
 
 def _number_before(toks: list[str], i: int) -> Optional[float]:
-    if i == 0:
+    """Read the whole number phrase ending just before toks[i] ("teen sau pachaas" = 350)."""
+    j = i
+    while j > 0 and _is_number_word(toks[j - 1]):
+        j -= 1
+    return _phrase_value(toks[j:i])
+
+
+def _phrase_value(phrase: list[str]) -> Optional[float]:
+    total, current, modifier, seen = 0.0, None, 0.0, False
+    for tok in phrase:
+        if tok in _MODIFIERS:                       # saadhe / sawa / paune: applies to the next number
+            modifier += _MODIFIERS[tok]
+        elif tok in _HUNDRED or tok in _THOUSAND:   # "teen sau" = 300, "sawa sau" = 125, "sau" = 100
+            base = current if current is not None else 1 + modifier
+            total += base * (100 if tok in _HUNDRED else 1000)
+            current, modifier, seen = None, 0.0, True
+        else:
+            value = float(tok) if _DIGITS.fullmatch(tok) else float(_UNITS.get(tok, _STANDALONE.get(tok, 0)))
+            current, modifier, seen = value + modifier, 0.0, True  # "teen chaar kilo" (3-4): the last one
+    if not seen:
         return None
-    prev = toks[i - 1]
-    if re.fullmatch(r"\d+(?:\.\d+)?", prev):
-        return float(prev)
-    if prev in _STANDALONE:
-        return _STANDALONE[prev]
-    if prev in _HUNDRED:  # "paanch sau kilo" = 500, "dhai sau" = 250, "sau kilo" = 100
-        base = _number_before(toks, i - 1)
-        return base * 100 if base is not None else 100.0
-    if prev in _UNITS:
-        value = float(_UNITS[prev])
-        if i >= 2 and toks[i - 2] in _MODIFIERS:
-            value += _MODIFIERS[toks[i - 2]]
-        return value
-    return None
+    return total + (current or 0.0)
 
 
 def stated_material(text: str) -> Optional[str]:
