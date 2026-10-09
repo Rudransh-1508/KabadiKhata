@@ -192,3 +192,20 @@ def test_missing_key_fails_closed(monkeypatch):
     monkeypatch.setenv("MOCK_LLM", "0")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     assert voice.transcribe(b64(WAV + b"no key")) == voice.FAILED
+
+
+def test_status_tells_no_answer_from_an_empty_answer(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("VOICE_PROVIDER", "sarvam")
+    monkeypatch.setattr(voice, "_ask_sarvam", lambda raw: "")
+    assert voice.transcribe_with_status(b64(WAV + b"quiet"))[1] == "empty"
+
+    def boom(raw):
+        raise TimeoutError
+
+    monkeypatch.setattr(voice, "_ask_sarvam", boom)
+    assert voice.transcribe_with_status(b64(WAV + b"down"))[1] == "error"
+    monkeypatch.setattr(voice, "_ask_sarvam", lambda raw: "दो किलो लोहा")
+    audio = b64(WAV + b"fine")
+    assert voice.transcribe_with_status(audio)[1] == "ok"
+    assert voice.transcribe_with_status(audio)[1] == "cached"

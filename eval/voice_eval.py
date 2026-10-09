@@ -5,7 +5,8 @@
 Each set (`tts` = Gemini TTS, `say` = macOS Hindi voice, `real` = recordings by the team) is scored
 apart, over the clips that exist (n is stated per set):
 Stated weight exactly right (the plan's bar: 8 of 10 clips), and material right. Rows with no
-weight or material said expect None. Answers are cached (.cache/voice).
+weight or material said expect None. A call that got no answer (quota, network) is a model error
+and not scored; an answer with nothing usable in it (empty transcript) is scored as a miss. Answers are cached (.cache/voice).
 Writes eval/RESULTS_voice_<provider>.md (VOICE_PROVIDER=sarvam|gemini picks who transcribes).
 """
 import base64
@@ -20,7 +21,7 @@ from _env import load_env  # noqa: E402
 
 load_env()
 from perception import voice  # noqa: E402
-from perception.voice import transcribe  # noqa: E402
+from perception.voice import transcribe_with_status  # noqa: E402
 
 PAUSE_S = float(os.getenv("EVAL_PAUSE_S", "6"))  # free tier: about 10 model calls a minute
 
@@ -52,10 +53,10 @@ def main() -> int:
         for r in set_rows:
             raw = (SET_DIRS[set_id] / r["file"]).read_bytes()
             cached = os.path.exists(voice._cache_path(voice._cache_key(raw)))
-            got = transcribe(base64.b64encode(raw).decode())
+            got, status = transcribe_with_status(base64.b64encode(raw).decode())
             if not cached:
                 time.sleep(PAUSE_S)
-            if got == voice.FAILED:  # no answer from the model (quota, network): not a wrong answer
+            if status == "error":  # no answer at all (quota, network): not a wrong answer
                 errors += 1
                 lines.append(f"| {r['file']} | {r['text']} | (model error) | | | | |")
                 continue

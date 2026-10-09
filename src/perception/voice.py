@@ -63,18 +63,24 @@ USER_PROMPT = "Transcribe this voice note. JSON only."
 
 
 def transcribe(audio_b64: str) -> Transcript:
+    return transcribe_with_status(audio_b64)[0]
+
+
+def transcribe_with_status(audio_b64: str) -> tuple[Transcript, str]:
+    """transcribe() plus how it ended: "stub", "cached", "ok", "empty" (the service answered but
+    nothing usable was said) or "error" (no answer: quota, timeout, network, missing key)."""
     raw = _decode(audio_b64)
     if not raw:
-        return FAILED
+        return FAILED, "error"
     if raw.startswith(b"fixture:"):
-        return stub_tools.transcribe(audio_b64)
+        return stub_tools.transcribe(audio_b64), "stub"
 
     key = _cache_key(raw)
     cached = _cache_get(key)
     if cached is not None:
-        return cached
+        return cached, "cached"
     if config.mock_llm():
-        return stub_tools.transcribe(audio_b64)
+        return stub_tools.transcribe(audio_b64), "stub"
 
     try:
         if config.voice_provider() == "sarvam":
@@ -86,13 +92,14 @@ def transcribe(audio_b64: str) -> Transcript:
     except KeyError as exc:
         log.error("transcribe needs %s for VOICE_PROVIDER=%s", exc.args[0] if exc.args else "an API key",
                   config.voice_provider())
-        return FAILED
+        return FAILED, "error"
     except Exception as exc:  # fail closed: the agent asks a Question
         log.warning("transcribe call failed: %s", type(exc).__name__)
-        return FAILED
-    if result != FAILED:
-        _cache_put(key, answer)
-    return result
+        return FAILED, "error"
+    if result == FAILED:
+        return FAILED, "empty"
+    _cache_put(key, answer)
+    return result, "ok"
 
 
 def from_transcript(text: str) -> Transcript:
