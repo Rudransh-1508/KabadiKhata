@@ -1,15 +1,21 @@
-"""Generate the synthetic voice clips in data/eval_voice/labels.csv with Gemini text-to-speech.
+"""Generate the synthetic voice clips in data/eval_voice/labels.csv.
 
-    uv run python eval/gen_voice_clips.py        # needs GEMINI_API_KEY in .env or the environment
+    uv run python eval/gen_voice_clips.py               # Gemini TTS, 6 voices (needs GEMINI_API_KEY)
+    uv run python eval/gen_voice_clips.py --engine say  # macOS "Lekha" Hindi voice: offline, no quota
+
+The Gemini free tier allows only a few TTS clips a day; the macOS voice has no limit. Each engine
+writes its own set (`tts` -> data/eval_voice/tts/, `say` -> data/eval_voice/say/), scored apart.
 
 Writes data/eval_voice/tts/tts_XX.wav (gitignored), 16-bit mono WAV. Rows already on disk are
 skipped, so a rate-limited run can be resumed. Empty replies are retried, per-minute rate limits
 are waited out, and a used-up daily quota stops the run cleanly. Voices rotate so the eval isn't one speaker.
 These clips are Synthetic (CLAUDE.md rule 3): report them apart from real recordings.
 """
+import argparse
 import csv
 import os
 import re
+import subprocess
 import sys
 import time
 import wave
@@ -17,6 +23,8 @@ from pathlib import Path
 
 LABELS = Path("data/eval_voice/labels.csv")
 OUT = Path("data/eval_voice/tts")
+SAY_OUT = Path("data/eval_voice/say")
+SAY_VOICE = "Lekha"
 MODEL = os.getenv("GEMINI_TTS_MODEL_ID", "gemini-2.5-flash-preview-tts")
 PAUSE_S = float(os.getenv("TTS_PAUSE_S", "7"))
 VOICES = ("Kore", "Puck", "Charon", "Aoede", "Fenrir", "Leda")
@@ -78,7 +86,28 @@ def speak_with_retries(client, types, text: str, voice: str) -> bytes | None:
     return None
 
 
+def say_main() -> int:
+    """macOS text-to-speech with the Hindi voice; converted to 16 kHz mono WAV like the bot sends."""
+    SAY_OUT.mkdir(parents=True, exist_ok=True)
+    rows = [r for r in csv.DictReader(LABELS.open(encoding="utf-8")) if r["set"] == "say"]
+    for r in rows:
+        path = SAY_OUT / r["file"]
+        if path.exists():
+            continue
+        aiff = path.with_suffix(".aiff")
+        subprocess.run(["say", "-v", SAY_VOICE, "-o", str(aiff), r["speak_hi"]], check=True)
+        subprocess.run(["afconvert", "-f", "WAVE", "-d", "LEI16@16000", "-c", "1", str(aiff), str(path)], check=True)
+        aiff.unlink()
+        print(f"{r['file']}: {r['speak_hi']}")
+    print(f"{len(rows)} clips in {SAY_OUT}")
+    return 0
+
+
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--engine", choices=["gemini", "say"], default="gemini")
+    if ap.parse_args().engine == "say":
+        return say_main()
     load_env()
     if not os.getenv("GEMINI_API_KEY") or os.environ["GEMINI_API_KEY"].startswith("your-"):
         print("Set GEMINI_API_KEY in .env first.")
@@ -94,7 +123,7 @@ def main() -> int:
         if path.exists():
             continue
         try:
-            pcm = speak_with_retries(client, types, r["text"], VOICES[i % len(VOICES)])
+            pcm = speak_with_retries(client, types, r["speak_hi"] or r["text"], VOICES[i % len(VOICES)])
         except QuotaExhausted:
             print("Daily TTS quota used up. Run this again tomorrow (or with a paid key); finished clips are kept.")
             return 1
@@ -106,7 +135,7 @@ def main() -> int:
             w.setsampwidth(2)
             w.setframerate(24000)
             w.writeframes(pcm)
-        print(f"{r['file']}: {r['text']}")
+        print(f"{r['file']}: {r['speak_hi'] or r['text']}")
         time.sleep(PAUSE_S)  # stay under free-tier rate limits
     done = sum((OUT / r["file"]).exists() for r in rows)
     print(f"{done}/{len(rows)} clips in {OUT}")
