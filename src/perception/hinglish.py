@@ -24,6 +24,29 @@ _UNITS = {
     "सत्रह": 17, "अठारह": 18, "उन्नीस": 19, "बीस": 20, "पच्चीस": 25, "तीस": 30, "चालीस": 40,
     "पचास": 50, "साठ": 60, "सत्तर": 70, "अस्सी": 80, "नब्बे": 90,
 }
+# 21-99 are irregular in Hindi, so they are listed in full (Devanagari, then common Hinglish spellings)
+_UNITS.update(dict(zip(
+    "इक्कीस बाईस तेईस चौबीस पच्चीस छब्बीस सत्ताईस अट्ठाईस उनतीस तीस "
+    "इकतीस बत्तीस तैंतीस चौंतीस पैंतीस छत्तीस सैंतीस अड़तीस उनतालीस चालीस "
+    "इकतालीस बयालीस तैंतालीस चवालीस पैंतालीस छियालीस सैंतालीस अड़तालीस उनचास पचास "
+    "इक्यावन बावन तिरपन चौवन पचपन छप्पन सत्तावन अट्ठावन उनसठ साठ "
+    "इकसठ बासठ तिरसठ चौंसठ पैंसठ छियासठ सड़सठ अड़सठ उनहत्तर सत्तर "
+    "इकहत्तर बहत्तर तिहत्तर चौहत्तर पचहत्तर छिहत्तर सतहत्तर अठहत्तर उन्यासी अस्सी "
+    "इक्यासी बयासी तिरासी चौरासी पचासी छियासी सत्तासी अट्ठासी नवासी नब्बे "
+    "इक्यानवे बानवे तिरानवे चौरानवे पंचानवे छियानवे सत्तानवे अट्ठानवे निन्यानवे".split(),
+    range(21, 100),
+)))
+_UNITS.update(dict(zip(
+    "ikkis bais teis chaubis pachchis chhabbis sattais atthais untis tees "
+    "iktis battis taintis chauntis paintis chhattis saintis adtis untalis chalis "
+    "iktalis bayalis taintalis chavalis paintalis chhiyalis saintalis adtalis unchas pachas "
+    "ikyavan bavan tirpan chauvan pachpan chhappan sattavan atthavan unsath saath "
+    "iksath basath tirsath chaunsath painsath chhiyasath sadsath adsath unhattar sattar "
+    "ikhattar bahattar tihattar chauhattar pachhattar chhihattar sathattar athhattar unyasi assi "
+    "ikyasi bayasi tirasi chaurasi pachasi chhiyasi sattasi atthasi navasi nabbe "
+    "ikyanve baanve tiranve chauranve pachanve chhiyanve sattanve atthanve ninyanve".split(),
+    range(21, 100),
+)))
 _STANDALONE = {"dedh": 1.5, "dedhh": 1.5, "dhai": 2.5, "dhaai": 2.5, "ढाई": 2.5, "डेढ़": 1.5, "डेढ": 1.5}
 _MODIFIERS = {"saadhe": 0.5, "sade": 0.5, "saade": 0.5, "साढ़े": 0.5, "साढे": 0.5,
               "sawa": 0.25, "savaa": 0.25, "sava": 0.25, "सवा": 0.25,
@@ -60,11 +83,12 @@ def _tokens(text: str) -> list[str]:
 
 
 def stated_kg(text: str) -> Optional[float]:
-    """The weight mentioned just before a kg word, or None. Digits win over words."""
+    """The whole number phrase just before a kg word, digits and words alike ("तीन सौ 50 किलो" = 350),
+    or None."""
     t = (text or "").lower()
-    m = re.search(r"(\d+(?:[.,]\d+)?)\s*" + _KG_WORDS, t)
-    if m:
-        return float(m.group(1).replace(",", "."))
+    t = re.sub(r"(?<=\d),(?=\d{3}\b)", "", t)            # 1,500 -> 1500 (thousands separator)
+    t = re.sub(r"(?<=\d),(?=\d{1,2}\b)", ".", t)          # 12,5 -> 12.5 (decimal comma)
+    t = re.sub(r"(?<=\d)(?=[^\d\s.,])", " ", t)           # 12kg -> 12 kg
     toks = _tokens(t)
     for i, tok in enumerate(toks):
         if not re.fullmatch(_KG_WORDS, tok):

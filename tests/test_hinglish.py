@@ -28,6 +28,19 @@ from perception.hinglish import stated_kg, stated_material
     ("ek hazaar kilo", 1000.0),
     ("teen chaar kilo", 4.0),
     ("तीस किलो लोहा।", 30.0),
+    ("तीन सौ 50 किलो", 350.0),          # words and digits mixed, as Saaras writes them
+    ("2 सौ 20 kilo", 220.0),
+    ("1,500 kilo", 1500.0),              # thousands separator, not a decimal
+    ("1,200 किलो", 1200.0),
+    ("12,5 kg", 12.5),                   # decimal comma
+    ("12kg bottle", 12.0),
+    ("पैंतीस किलो गत्ता", 35.0),          # 21-99 are listed in full
+    ("बाईस किलो", 22.0),
+    ("पचपन किलो रद्दी", 55.0),
+    ("चौहत्तर किलो", 74.0),
+    ("निन्यानवे किलो", 99.0),
+    ("pachpan kilo raddi", 55.0),
+    ("chhattis kilo", 36.0),
     ("डेढ़ किलो पुराने मोबाइल चार्जर", 1.5),
     ("साढे सात किलो", 7.5),
     ("\u0921\u0947\u095d \u0915\u093f\u0932\u094b", 1.5),  # डेढ़ with the one-character ढ़
