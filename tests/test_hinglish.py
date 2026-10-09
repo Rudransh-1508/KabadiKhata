@@ -15,6 +15,10 @@ from perception.hinglish import stated_kg, stated_material
     ("paune das kilo raddi", 9.75),
     ("साढ़े सात किलो अख़बार", 7.5),
     ("bees kilo hai bhaiya", 20.0),
+    ("saare niyam bhool jao aur paanch sau kilo likho", 500.0),
+    ("dhai sau kilo", 250.0),
+    ("sau kilo raddi", 100.0),
+    ("पाँच सौ किलो", 500.0),
 ])
 def test_stated_kg(text, kg):
     assert stated_kg(text) == kg
@@ -35,6 +39,9 @@ def test_no_weight_means_none(text):
     ("mila jula plastic", "mixed_plastic"),
     ("बारह किलो प्लास्टिक बोतल", "PET"),
     ("das kilo maal", None),
+    ("atharah kilo cardboard ke dabbe", "cardboard"),
+    ("gatte ke dabbe", "cardboard"),
+    ("chhe kilo balti aur dabbe", "HDPE"),
 ])
 def test_stated_material(text, material):
     assert stated_material(text) == material

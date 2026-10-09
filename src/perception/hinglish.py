@@ -17,25 +17,26 @@ _UNITS = {
     "pandrah": 15, "pandra": 15, "solah": 16, "sola": 16, "satrah": 17, "satra": 17, "atharah": 18,
     "athara": 18, "unnis": 19, "bees": 20, "bis": 20, "pachees": 25, "pachchis": 25, "pachis": 25,
     "tees": 30, "chalees": 40, "chalis": 40, "pachaas": 50, "pachas": 50, "saath": 60, "sattar": 70,
-    "assi": 80, "nabbe": 90, "sau": 100,
+    "assi": 80, "nabbe": 90,
     "एक": 1, "दो": 2, "तीन": 3, "चार": 4, "पांच": 5, "पाँच": 5, "छह": 6, "छः": 6, "सात": 7, "आठ": 8,
     "नौ": 9, "दस": 10, "ग्यारह": 11, "बारह": 12, "तेरह": 13, "चौदह": 14, "पंद्रह": 15, "सोलह": 16,
     "सत्रह": 17, "अठारह": 18, "उन्नीस": 19, "बीस": 20, "पच्चीस": 25, "तीस": 30, "चालीस": 40,
-    "पचास": 50, "साठ": 60, "सत्तर": 70, "अस्सी": 80, "नब्बे": 90, "सौ": 100,
+    "पचास": 50, "साठ": 60, "सत्तर": 70, "अस्सी": 80, "नब्बे": 90,
 }
 _STANDALONE = {"dedh": 1.5, "dedhh": 1.5, "dhai": 2.5, "dhaai": 2.5, "ढाई": 2.5, "डेढ़": 1.5, "डेढ": 1.5}
 _MODIFIERS = {"saadhe": 0.5, "sade": 0.5, "saade": 0.5, "साढ़े": 0.5, "साढे": 0.5,
               "sawa": 0.25, "savaa": 0.25, "sava": 0.25, "सवा": 0.25,
               "paune": -0.25, "पौने": -0.25}
 _KG_WORDS = r"(?:kg|kgs|kilo|kilos|kilogram|किलो|केजी)"
+_HUNDRED = {"sau", "सौ"}
 
-# Order matters: more specific materials first
+# Order matters: named materials (gatta, raddi) before generic container words (dabba, balti)
 _MATERIALS = [
     ("PET", ["pet", "bottle", "botal", "बोतल", "bisleri", "बिसलेरी"]),
     ("LDPE_film", ["panni", "polythene", "polithin", "pannee", "पन्नी", "पॉलीथीन", "thaili", "थैली"]),
-    ("HDPE", ["hdpe", "dabba", "dabbe", "डिब्बा", "डिब्बे", "balti", "बाल्टी"]),
     ("cardboard", ["gatta", "gatte", "गत्ता", "गत्ते", "cardboard", "carton", "कार्टन"]),
     ("paper", ["raddi", "akhbaar", "akhbar", "newspaper", "kagaz", "kaagaz", "रद्दी", "अख़बार", "अखबार", "काग़ज़", "कागज"]),
+    ("HDPE", ["hdpe", "dabba", "dabbe", "डिब्बा", "डिब्बे", "balti", "बाल्टी"]),
     ("metal", ["loha", "lohe", "लोहा", "लोहे", "tin", "टिन", "metal", "aluminium", "steel", "स्टील", "can", "cans"]),
     ("ewaste", ["charger", "wire", "taar", "तार", "mobile", "battery", "e-waste", "ewaste", "चार्जर"]),
     ("mixed_plastic", ["plastic", "प्लास्टिक", "plastik"]),
@@ -70,6 +71,9 @@ def _number_before(toks: list[str], i: int) -> Optional[float]:
         return float(prev)
     if prev in _STANDALONE:
         return _STANDALONE[prev]
+    if prev in _HUNDRED:  # "paanch sau kilo" = 500, "dhai sau" = 250, "sau kilo" = 100
+        base = _number_before(toks, i - 1)
+        return base * 100 if base is not None else 100.0
     if prev in _UNITS:
         value = float(_UNITS[prev])
         if i >= 2 and toks[i - 2] in _MODIFIERS:
