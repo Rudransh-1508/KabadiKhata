@@ -36,6 +36,14 @@ _Avoid_: Upload, submission
 The single Hindi follow-up the agent asks when a Collection fails the consistency check. No Receipt is written.
 _Avoid_: Error, rejection
 
+**Scale reading**:
+The weight the scale shows in a Collection's photo, in kg, as read by the agent. A Receipt's weight is always the Scale reading; an unreadable scale gives no Scale reading and ends in a Question.
+_Avoid_: Photo weight, detected weight
+
+**Stated weight**:
+The weight the Kabadiwala gives for a Collection, by taps, voice or a typed note. It is checked against the Scale reading and never stored as the Receipt's weight.
+_Avoid_: Claim, claimed weight (Claim is avoided; see Certificate), declared weight
+
 **Chain**:
 The ordered Receipts of one Kabadiwala, each linked to the previous by hash, so any edit shows up as a break at a specific position.
 _Avoid_: Ledger (when meaning one Kabadiwala's records), blockchain
@@ -77,4 +85,5 @@ _Avoid_: Fake, mock (in UI text)
 ## Flagged ambiguities
 
 - "Claim" and "Certificate" were used for the same thing. Resolved: **Certificate** only.
+- "Claimed kg" (code) and "Claim" (avoided term) collided. Resolved: the Kabadiwala's number is the **Stated weight**; code names like `claimed_kg` stay as they are.
 - "Verified" meant both "came through the system" and "chain intact". Resolved: **Verified inflow** requires both.
