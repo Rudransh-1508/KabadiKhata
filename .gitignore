@@ -26,3 +26,5 @@ data/eval_voice/tts/
 data/eval_voice/real/
 data/eval_voice/say/
 data/eval_voice/sarvam/
+data/eval_lookalike/*
+!data/eval_lookalike/pairs.csv
