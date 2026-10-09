@@ -13,7 +13,7 @@ def llm_provider() -> str:
 
 
 def gemini_model_id() -> str:
-    return os.getenv("GEMINI_MODEL_ID", "gemini-2.5-flash")
+    return os.getenv("GEMINI_MODEL_ID", "gemini-flash-latest")
 
 
 def openai_model_id() -> str:
@@ -25,12 +25,13 @@ def cache_dir() -> str:
 
 
 def perception_timeout_s() -> float:
-    """Per-call limit for read_photo / transcribe, so one collection stays under ~25 s (CLAUDE.md #2)."""
+    """Per-call limit for read_photo / transcribe. A collection may run both, then the agent's own
+    model turns, so each gets 10 s to keep the whole request under ~25 s (CLAUDE.md #2)."""
     try:
-        v = float(os.getenv("PERCEPTION_TIMEOUT_S", "20"))
+        v = float(os.getenv("PERCEPTION_TIMEOUT_S", "10"))
     except ValueError:
-        return 20.0
-    return v if 0 < v < float("inf") else 20.0
+        return 10.0
+    return v if 0 < v < float("inf") else 10.0
 
 
 def explain_timeout_s() -> float:

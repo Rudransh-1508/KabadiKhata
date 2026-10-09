@@ -20,13 +20,12 @@ import logging
 import math
 import os
 import re
-import tempfile
 import threading
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Callable, Literal, Optional
 
-from common import config
+from common import config, jsoncache
 from common.models import MATERIALS, Flag
 
 log = logging.getLogger("kk.explain")
@@ -400,34 +399,19 @@ def _cache_path(cache_dir: str, key: str) -> str:
 
 
 def _cache_get(cache_dir: str, key: str) -> Optional[tuple]:
-    try:
-        with open(_cache_path(cache_dir, key), encoding="utf-8") as fh:
-            obj = json.load(fh)
-        if isinstance(obj.get("en"), str) and isinstance(obj.get("hi"), str):
-            return obj["en"], obj["hi"]
-    except (OSError, ValueError, AttributeError):
-        pass
+    obj = jsoncache.read_json(_cache_path(cache_dir, key))
+    if obj and isinstance(obj.get("en"), str) and isinstance(obj.get("hi"), str):
+        return obj["en"], obj["hi"]
     return None
 
 
 def _cache_put(cache_dir: str, key: str, en: str, hi: str) -> None:
-    try:
-        path = _cache_path(cache_dir, key)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump({"en": en, "hi": hi, "prompt_version": PROMPT_VERSION, "model_id": _model_label()},
-                      fh, ensure_ascii=False)
-        os.replace(tmp, path)
-    except OSError as exc:
-        log.warning("explanation cache write failed: %s", type(exc).__name__)
+    jsoncache.write_json(_cache_path(cache_dir, key),
+                         {"en": en, "hi": hi, "prompt_version": PROMPT_VERSION, "model_id": _model_label()})
 
 
 def _cache_drop(cache_dir: str, key: str) -> None:
-    try:
-        os.remove(_cache_path(cache_dir, key))
-    except OSError:
-        pass
+    jsoncache.drop(_cache_path(cache_dir, key))
 
 
 def _call_with_timeout(fn: Completer, system: str, user: str, timeout: float) -> str:
