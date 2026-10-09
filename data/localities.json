@@ -1,0 +1,15 @@
+{
+  "_note": "Synthetic demo data. 10 Delhi localities with approximate centroid coordinates (WGS84). Chosen for plausible kabadiwala / scrap-trade relevance (Seelampur e-waste hub, Mayapuri scrap market, Ghazipur landfill, etc.). Coordinates are approximate and used only for locality jitter and optional maps. Everything in this project is labelled synthetic.",
+  "localities": [
+    { "id": "seelampur",   "name": "Seelampur",   "lat": 28.6700, "lon": 77.2670, "note": "e-waste dismantling hub" },
+    { "id": "mayapuri",     "name": "Mayapuri",     "lat": 28.6360, "lon": 77.1250, "note": "scrap & metal market" },
+    { "id": "mundka",       "name": "Mundka",       "lat": 28.6820, "lon": 77.0300, "note": "industrial / informal recycling" },
+    { "id": "ghazipur",     "name": "Ghazipur",     "lat": 28.6200, "lon": 77.3260, "note": "landfill area" },
+    { "id": "okhla",        "name": "Okhla",        "lat": 28.5360, "lon": 77.2770, "note": "industrial area" },
+    { "id": "lajpat_nagar", "name": "Lajpat Nagar", "lat": 28.5670, "lon": 77.2430, "note": "residential; persona Raju's beat" },
+    { "id": "shahdara",     "name": "Shahdara",     "lat": 28.6730, "lon": 77.2890, "note": "dense residential / trade" },
+    { "id": "nangloi",      "name": "Nangloi",      "lat": 28.6820, "lon": 77.0650, "note": "west Delhi residential" },
+    { "id": "karol_bagh",   "name": "Karol Bagh",   "lat": 28.6510, "lon": 77.1900, "note": "central market area" },
+    { "id": "rohini",       "name": "Rohini",       "lat": 28.7440, "lon": 77.0670, "note": "north-west residential" }
+  ]
+}
