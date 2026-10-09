@@ -22,6 +22,8 @@ import time
 import wave
 from pathlib import Path
 
+from _env import load_env
+
 LABELS = Path("data/eval_voice/labels.csv")
 OUT = Path("data/eval_voice/tts")
 SAY_OUT = Path("data/eval_voice/say")
@@ -35,15 +37,6 @@ PAUSE_S = float(os.getenv("TTS_PAUSE_S", "7"))
 VOICES = ("Kore", "Puck", "Charon", "Aoede", "Fenrir", "Leda")
 STYLE = ("Say this the way a scrap collector in a Delhi lane would, casually, in Hindi, "
          "as a quick voice note on a phone: ")
-
-
-def load_env() -> None:
-    env = Path(".env")
-    if env.exists():
-        for line in env.read_text(encoding="utf-8").splitlines():
-            key, sep, value = line.partition("=")
-            if sep and key.strip() and not key.startswith("#"):
-                os.environ.setdefault(key.strip(), value.split("#", 1)[0].strip())
 
 
 def speak(client, types, text: str, voice: str) -> bytes | None:

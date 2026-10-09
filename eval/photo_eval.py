@@ -17,6 +17,9 @@ from pathlib import Path
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from _env import load_env  # noqa: E402
+
+load_env()
 from perception.photo import read_photo  # noqa: E402
 
 LABELS = Path("data/eval_photos/labels.csv")

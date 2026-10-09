@@ -15,6 +15,9 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from _env import load_env  # noqa: E402
+
+load_env()
 from perception import voice  # noqa: E402
 from perception.voice import transcribe  # noqa: E402
 
