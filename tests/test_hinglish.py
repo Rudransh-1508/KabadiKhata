@@ -59,7 +59,9 @@ def test_no_weight_means_none(text):
     ("सात किलो स्टील के बर्तन", "metal"),
     ("चालीस किलो रद्दी कागज़", "paper"),
     ("डेढ़ किलो पुराने मोबाइल चार्जर", "ewaste"),
-    ("ढाई किलो लोहा।", "metal"),                 # Sarvam ends sentences with a danda
+    ("ढाई किलो लोहा।", "metal"),
+    ("10 किलो टिन के डिब्बे।", "metal"),
+    ("steel ke dabbe", "metal"),                 # Sarvam ends sentences with a danda
     ("12 किलो बोतलें।", "PET"),
     ("बॉटल है सब।", "PET"),
     ("ठीक है जी, 9 किलो प्लास्टिक बोतल।", "PET"),

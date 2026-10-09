@@ -32,16 +32,16 @@ _KG_WORDS = r"(?:kg|kgs|kilo|kilos|kilogram|किलो|केजी)"
 _HUNDRED = {"sau", "सौ"}
 _THOUSAND = {"hazaar", "hazar", "हज़ार", "हजार"}
 
-# Order matters: named materials (gatta, raddi) before generic container words (dabba, balti)
+# Order matters: named materials (gatta, raddi, tin) before generic container words (dabba, balti)
 _MATERIALS = [
     ("PET", ["pet", "bottle", "bottles", "botal", "बोतल", "बोतलें", "बोतलों", "बॉटल", "बॉटल्स", "bisleri", "बिसलेरी"]),
     ("LDPE_film", ["panni", "polythene", "polithin", "pannee", "पन्नी", "पॉलीथीन", "पॉलिथीन", "पॉलीथिन", "पोलिथीन", "thaili", "थैली"]),
     ("cardboard", ["gatta", "gatte", "गत्ता", "गत्ते", "cardboard", "carton", "कार्टन", "कार्डबोर्ड"]),
     ("paper", ["raddi", "akhbaar", "akhbar", "newspaper", "kagaz", "kaagaz", "रद्दी", "रदी", "अख़बार", "अखबार", "काग़ज़", "कागज"]),
-    ("HDPE", ["hdpe", "dabba", "dabbe", "डिब्बा", "डिब्बे", "balti", "बाल्टी"]),
     ("metal", ["loha", "lohe", "लोहा", "लोहे", "tin", "टिन", "metal", "aluminium", "steel", "स्टील", "can", "cans",
                "एल्युमिनियम", "एल्यूमीनियम", "कैन", "bartan", "bartano", "बर्तन", "मेटल"]),
     ("ewaste", ["charger", "wire", "taar", "तार", "mobile", "battery", "e-waste", "ewaste", "चार्जर", "मोबाइल", "बैटरी"]),
+    ("HDPE", ["hdpe", "dabba", "dabbe", "डिब्बा", "डिब्बे", "balti", "बाल्टी"]),
     ("mixed_plastic", ["plastic", "प्लास्टिक", "plastik"]),
 ]
 
