@@ -43,9 +43,14 @@ def collect(payload: dict) -> dict:
     receipt is built from the taps/voice so the happy path looks real.
     """
     if payload.get("simulate") == "mismatch":
+        # Pretend the photo read 12 kg and compare to what the user actually
+        # entered, so the refusal uses the REAL tapped weight (not a fixed "20").
+        taps = payload.get("taps") or {}
+        claimed = taps.get("kg") if taps.get("kg") is not None else payload.get("kg")
+        claimed_str = f"{float(claimed):g}" if isinstance(claimed, (int, float)) else "?"
         return {
             "status": "question",
-            "question_hi": "Taraazu 12 kilo dikha raha hai, aapne 20 bola. Kaun sa sahi hai?",
+            "question_hi": f"Taraazu 12 kilo dikha raha hai, aapne {claimed_str} kilo bola. Kaun sa sahi hai?",
         }
 
     taps = payload.get("taps") or {}
@@ -77,6 +82,11 @@ def collect(payload: dict) -> dict:
         "synthetic": True,
     }
     return {"status": "receipt", "receipt": receipt}
+
+
+def register(collector_id: str, name: str, locality: str | None = None) -> dict:
+    """Mock PUT /actors/{id}: no backend, just echo the actor (parity with api_client)."""
+    return {"actor_id": collector_id, "role": "kabadiwala", "name": name, "locality": locality}
 
 
 def hisaab(collector_id: str) -> dict:
