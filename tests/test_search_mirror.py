@@ -90,6 +90,8 @@ def test_new_receipts_are_copied_and_searchable(tmp_path, mirror):
 
 @live
 def test_search_api_through_a_live_collection(tmp_path, monkeypatch, mirror):
+    directory.register("au-1", "auditor")  # Cedar fails closed for unknown principals
+    directory.register("kw-raju", "kabadiwala")
     monkeypatch.setenv("MOCK_LLM", "1")
     monkeypatch.setenv("KK_DB_PATH", str(tmp_path / "kk.db"))
     monkeypatch.setenv("KK_PHOTO_DIR", str(tmp_path / "photos"))
@@ -101,6 +103,7 @@ def test_search_api_through_a_live_collection(tmp_path, monkeypatch, mirror):
     body = client.post("/collections", headers={"X-Principal": "kw-raju"}, json={
         "collector_id": "kw-raju", "photo_b64": photo, "taps": {"material": "PET", "kg": 12}, "locality": "Seelampur",
     }).json()
+    assert body["status"] == "receipt", body
     mirror.client.indices.refresh(index=mirror.index)
     found = client.get("/search/receipts", params={"q": "seelampur"}, headers={"X-Principal": "au-1"}).json()
     assert [r["receipt_id"] for r in found["receipts"]] == [body["receipt"]["receipt_id"]]
