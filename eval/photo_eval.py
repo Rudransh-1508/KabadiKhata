@@ -59,7 +59,8 @@ def main() -> int:
         print(f"Label these first (true_kg + readable in {LABELS}): {', '.join(unlabelled)}")
         return 1
 
-    report = [f"# read_photo eval: {split} split", ""]
+    report = [f"# read_photo eval: {split} split", "",
+              f"Model: {photo.config.gemini_model_id()} (prompt {photo.PROMPT_VERSION})", ""]
     for set_id, set_rows in _by_set(rows).items():
         report += _score(set_id, set_rows)
     out = Path(f"eval/RESULTS_photo_{split}.md")
