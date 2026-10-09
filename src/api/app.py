@@ -22,6 +22,7 @@ from agent.agent import handle_collection
 from common.models import Actor, CollectionRequest
 from ledger import chain
 from ledger.store import Store
+from policy import directory
 from policy.authz import Decision, is_allowed
 from radar import rules
 from search.mirror import Mirror, SearchUnavailable, mirror_from_env
@@ -37,7 +38,9 @@ app = FastAPI(title="Kabadi Khata API")
 
 @lru_cache
 def _store_at(path: str, url: str, index: str) -> Store:
-    return Store(path, mirror=mirror_from_env() if url else None)
+    store = Store(path, mirror=mirror_from_env() if url else None)
+    directory.load_from_store(store)
+    return store
 
 
 def get_store() -> Store:

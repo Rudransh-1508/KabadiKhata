@@ -1,4 +1,4 @@
-"""The agent's tools, bound to one collection request (a Session).
+"""The agent's tools, bound to one Collection request (a Session).
 
 Tools take no arguments from the model: they read the evidence from the session. The model chooses
 which tool to call next, but it can never supply a weight, material or price. `create_receipt` is the
@@ -178,18 +178,18 @@ def guarded_create_receipt(s: Session) -> dict:
 def build_tools(s: Session) -> list:
     @tool
     def read_photo() -> dict:
-        """Read the weight (kg) and the material from the collector's scale photo."""
+        """Read the weight (kg) and the material from the Kabadiwala's scale photo."""
         return do_read_photo(s).model_dump()
 
     @tool
     def transcribe() -> dict:
-        """Transcribe the collector's Hindi voice note and extract the weight and material they said."""
+        """Transcribe the Kabadiwala's Hindi voice note and extract the weight and material they said."""
         tr = do_transcribe(s)
-        return tr.model_dump() if tr else {"note": "no voice note in this collection"}
+        return tr.model_dump() if tr else {"note": "no voice note in this Collection"}
 
     @tool
     def phash_check() -> dict:
-        """Check whether this photo was already used for an earlier receipt."""
+        """Check whether this photo was already used for an earlier Receipt."""
         return do_phash_check(s).model_dump()
 
     @tool
@@ -199,12 +199,12 @@ def build_tools(s: Session) -> list:
 
     @tool
     def quote_price() -> dict:
-        """Indicative price for this collection. Call only after check_consistency returned ok=true."""
+        """Indicative price for this Collection. Call only after check_consistency returned ok=true."""
         return do_quote_price(s).model_dump()
 
     @tool
     def create_receipt() -> dict:
-        """Write the receipt. Refuses unless check_consistency passes; never call it after ok=false."""
+        """Write the Receipt. Refuses unless check_consistency passes; never call it after ok=false."""
         return guarded_create_receipt(s)
 
     return [read_photo, transcribe, phash_check, check_consistency, quote_price, create_receipt]

@@ -1,4 +1,4 @@
-"""Run two collections through the agent and print the tool-call trace.
+"""Run two Collections through the agent and print the tool-call trace.
 
     MOCK_LLM=1 python -m agent.demo          (from src/, or with src on PYTHONPATH)
 """

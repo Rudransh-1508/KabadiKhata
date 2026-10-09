@@ -168,16 +168,9 @@ def run(store: Store, month: str | None = None) -> list[Flag]:
 
 
 def _explain(flag: Flag, store: Store) -> Flag:
-    """P2's radar.explain may rewrite the text (never the verdict). Until it exists, the rule's own text stays."""
-    try:
-        from radar.explain import explain
-    except ImportError:
-        return flag
-    explained = explain(flag, store)
-    return flag.model_copy(update={
-        "explanation_en": explained.explanation_en,
-        "explanation_hi": explained.explanation_hi,
-    })
+    """radar.explain fills only empty explanation text (never the verdict); text the rule already set stays."""
+    from radar.explain import with_llm_explanation
+    return with_llm_explanation(flag)
 
 
 # ---------- brand view ----------
