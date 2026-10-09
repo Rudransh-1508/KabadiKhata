@@ -2,9 +2,10 @@
 
     uv run python eval/gen_voice_clips.py               # Gemini TTS, 6 voices (needs GEMINI_API_KEY)
     uv run python eval/gen_voice_clips.py --engine say  # macOS "Lekha" Hindi voice: offline, no quota
+    uv run python eval/gen_voice_clips.py --engine sarvam  # Sarvam Bulbul, 6 Indian voices (needs SARVAM_API_KEY)
 
 The Gemini free tier allows only a few TTS clips a day; the macOS voice has no limit. Each engine
-writes its own set (`tts` -> data/eval_voice/tts/, `say` -> data/eval_voice/say/), scored apart.
+writes its own set (`tts`, `say`, `sarvam` -> data/eval_voice/<set>/), scored apart.
 
 Writes data/eval_voice/tts/tts_XX.wav (gitignored), 16-bit mono WAV. Rows already on disk are
 skipped, so a rate-limited run can be resumed. Empty replies are retried, per-minute rate limits
@@ -25,6 +26,10 @@ LABELS = Path("data/eval_voice/labels.csv")
 OUT = Path("data/eval_voice/tts")
 SAY_OUT = Path("data/eval_voice/say")
 SAY_VOICE = "Lekha"
+SARVAM_OUT = Path("data/eval_voice/sarvam")
+SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech"
+SARVAM_TTS_MODEL = os.getenv("SARVAM_TTS_MODEL_ID", "bulbul:v3")
+SARVAM_SPEAKERS = ("shubh", "ritu", "aditya", "priya", "rahul", "neha")
 MODEL = os.getenv("GEMINI_TTS_MODEL_ID", "gemini-2.5-flash-preview-tts")
 PAUSE_S = float(os.getenv("TTS_PAUSE_S", "7"))
 VOICES = ("Kore", "Puck", "Charon", "Aoede", "Fenrir", "Leda")
@@ -103,11 +108,47 @@ def say_main() -> int:
     return 0
 
 
+def sarvam_main() -> int:
+    """Sarvam Bulbul text-to-speech: 16 kHz WAV, speakers rotate so the eval isn't one voice."""
+    import base64
+
+    import httpx
+
+    load_env()
+    key = os.getenv("SARVAM_API_KEY", "")
+    if not key or key.startswith("your-"):
+        print("Set SARVAM_API_KEY in .env first (dashboard.sarvam.ai).")
+        return 1
+    SARVAM_OUT.mkdir(parents=True, exist_ok=True)
+    rows = [r for r in csv.DictReader(LABELS.open(encoding="utf-8")) if r["set"] == "sarvam"]
+    for i, r in enumerate(rows):
+        path = SARVAM_OUT / r["file"]
+        if path.exists():
+            continue
+        resp = httpx.post(
+            SARVAM_TTS_URL,
+            headers={"api-subscription-key": key},
+            json={"text": r["speak_hi"], "language_code": "hi-IN", "model": SARVAM_TTS_MODEL,
+                  "speaker": SARVAM_SPEAKERS[i % len(SARVAM_SPEAKERS)], "speech_sample_rate": 16000},
+            timeout=60,
+        )
+        if resp.status_code != 200:
+            print(f"{r['file']}: HTTP {resp.status_code}: {resp.text[:300]}")
+            return 1
+        path.write_bytes(base64.b64decode("".join(resp.json()["audios"])))
+        print(f"{r['file']}: {r['speak_hi']}")
+    print(f"{len(rows)} clips in {SARVAM_OUT}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--engine", choices=["gemini", "say"], default="gemini")
-    if ap.parse_args().engine == "say":
+    ap.add_argument("--engine", choices=["gemini", "say", "sarvam"], default="gemini")
+    engine = ap.parse_args().engine
+    if engine == "say":
         return say_main()
+    if engine == "sarvam":
+        return sarvam_main()
     load_env()
     if not os.getenv("GEMINI_API_KEY") or os.environ["GEMINI_API_KEY"].startswith("your-"):
         print("Set GEMINI_API_KEY in .env first.")

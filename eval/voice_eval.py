@@ -22,9 +22,10 @@ PAUSE_S = float(os.getenv("EVAL_PAUSE_S", "6"))  # free tier: about 10 model cal
 
 LABELS = Path("data/eval_voice/labels.csv")
 SET_DIRS = {"tts": Path("data/eval_voice/tts"), "say": Path("data/eval_voice/say"),
-            "real": Path("data/eval_voice/real")}
+            "sarvam": Path("data/eval_voice/sarvam"), "real": Path("data/eval_voice/real")}
 SET_NAMES = {"tts": "Synthetic clips (Gemini text-to-speech, 6 voices)",
              "say": "Synthetic clips (macOS Hindi voice \"Lekha\")",
+             "sarvam": "Synthetic clips (Sarvam Bulbul text-to-speech, 6 voices)",
              "real": "Real voice notes recorded by the team"}
 
 
@@ -38,7 +39,7 @@ def main() -> int:
         print("No clips yet: run eval/gen_voice_clips.py (--engine say works offline) or record some.")
         return 1
 
-    report = ["# transcribe eval", ""]
+    report = ["# transcribe eval", "", f"Transcribed with: {voice._model_tag()}", ""]
     for set_id in SET_DIRS:
         set_rows = [r for r in rows if r["set"] == set_id]
         if not set_rows:
