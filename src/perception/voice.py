@@ -33,6 +33,12 @@ log = logging.getLogger(__name__)
 
 PROMPT_VERSION = "voice-v1"
 SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text"
+# Kabadi vocabulary Saaras should favour (its `keyterms` option): short words it otherwise mishears,
+# e.g. पन्नी as पानी/पनीर and गत्ता as पत्ता. Bump KEYTERMS_VERSION when this list changes.
+KEYTERMS_VERSION = "kt1"
+SARVAM_KEYTERMS = ["किलो", "पन्नी", "गत्ता", "गत्ते", "रद्दी", "अख़बार", "बोतल", "डिब्बे", "डिब्बा", "बाल्टी",
+                   "लोहा", "टिन", "पॉलीथीन", "थैली", "चार्जर", "तार", "प्लास्टिक", "कबाड़", "डेढ़", "ढाई",
+                   "साढ़े", "सवा", "पौने"]
 MAX_KG = 500.0
 FAILED = Transcript(text_hi="", claimed_kg=None, claimed_material=None)
 
@@ -181,7 +187,8 @@ def _ask_sarvam(raw: bytes) -> str:
         SARVAM_STT_URL,
         headers={"api-subscription-key": os.environ["SARVAM_API_KEY"]},
         files={"file": (f"note.{mime.split('/')[1]}", raw, mime)},
-        data={"model": config.sarvam_stt_model_id(), "language_code": "hi-IN"},
+        data={"model": config.sarvam_stt_model_id(), "language_code": "hi-IN",
+              "keyterms": json.dumps(SARVAM_KEYTERMS, ensure_ascii=False)},
         timeout=config.perception_timeout_s(),
     )
     resp.raise_for_status()
@@ -190,7 +197,7 @@ def _ask_sarvam(raw: bytes) -> str:
 
 def _model_tag() -> str:
     if config.voice_provider() == "sarvam":
-        return f"sarvam:{config.sarvam_stt_model_id()}"
+        return f"sarvam:{config.sarvam_stt_model_id()}:{KEYTERMS_VERSION}"
     return f"{PROMPT_VERSION}|{config.gemini_model_id()}"
 
 
