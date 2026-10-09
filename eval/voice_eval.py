@@ -5,7 +5,8 @@
 Each set (`tts` = Gemini TTS, `say` = macOS Hindi voice, `real` = recordings by the team) is scored
 apart, over the clips that exist (n is stated per set):
 Stated weight exactly right (the plan's bar: 8 of 10 clips), and material right. Rows with no
-weight or material said expect None. Answers are cached (.cache/voice). Writes eval/RESULTS_voice.md.
+weight or material said expect None. Answers are cached (.cache/voice).
+Writes eval/RESULTS_voice_<provider>.md (VOICE_PROVIDER=sarvam|gemini picks who transcribes).
 """
 import base64
 import csv
@@ -79,7 +80,7 @@ def main() -> int:
             "|---|---|---|---|---|---|---|",
             *lines, "",
         ]
-    out = Path("eval/RESULTS_voice.md")
+    out = Path(f"eval/RESULTS_voice_{voice.config.voice_provider()}.md")
     out.write_text("\n".join(report) + "\n", encoding="utf-8")
     print("\n".join(line for line in report if line.startswith(("##", "- "))))
     print(f"Wrote {out}")
