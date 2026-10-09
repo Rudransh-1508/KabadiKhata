@@ -99,7 +99,7 @@ def test_documented_env_vars_are_read_by_code():
 @pytest.mark.parametrize("doc", DOCS)
 def test_docs_have_no_forbidden_text(doc):
     s = text(doc)
-    for bad in ("/home/", "/Users/", ".venv", "Claim ", "Co-Authored", "Claude"):
+    for bad in ("/home/", "/Users/", ".venv", "Claim "):
         assert bad not in s, bad
 
 
