@@ -128,3 +128,38 @@ def test_default_provider_follows_the_key(monkeypatch, key, provider):
     monkeypatch.delenv("VOICE_PROVIDER", raising=False)
     monkeypatch.setenv("SARVAM_API_KEY", key)
     assert config.voice_provider() == provider
+
+
+def test_gemini_call_has_a_timeout(monkeypatch):
+    seen = {}
+
+    class FakeModels:
+        def generate_content(self, **kw):
+            return type("R", (), {"text": answer("दो किलो लोहा")})()
+
+    class FakeClient:
+        def __init__(self, api_key, http_options):
+            seen["timeout_ms"] = http_options.timeout
+            self.models = FakeModels()
+
+    from google import genai
+    monkeypatch.setattr(genai, "Client", FakeClient)
+    monkeypatch.setenv("GEMINI_API_KEY", "test")
+    monkeypatch.setenv("PERCEPTION_TIMEOUT_S", "12")
+    voice._ask_gemini(WAV)
+    assert seen["timeout_ms"] == 12000
+
+
+def test_sarvam_call_has_a_timeout(monkeypatch):
+    import httpx
+    seen = {}
+
+    def fake_post(url, **kw):
+        seen["timeout"] = kw["timeout"]
+        return httpx.Response(200, json={"transcript": "दो किलो लोहा"}, request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setenv("SARVAM_API_KEY", "test")
+    monkeypatch.setenv("PERCEPTION_TIMEOUT_S", "12")
+    assert voice._ask_sarvam(WAV) == "दो किलो लोहा"
+    assert seen["timeout"] == 12.0

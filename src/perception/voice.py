@@ -157,7 +157,10 @@ def _ask_gemini(raw: bytes) -> str:
     from google import genai
     from google.genai import types
 
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    client = genai.Client(
+        api_key=os.environ["GEMINI_API_KEY"],
+        http_options=types.HttpOptions(timeout=int(config.perception_timeout_s() * 1000)),
+    )
     resp = client.models.generate_content(
         model=config.gemini_model_id(),
         contents=[types.Part.from_bytes(data=raw, mime_type=_mime(raw)), USER_PROMPT],
@@ -179,7 +182,7 @@ def _ask_sarvam(raw: bytes) -> str:
         headers={"api-subscription-key": os.environ["SARVAM_API_KEY"]},
         files={"file": (f"note.{mime.split('/')[1]}", raw, mime)},
         data={"model": config.sarvam_stt_model_id(), "language_code": "hi-IN"},
-        timeout=20,
+        timeout=config.perception_timeout_s(),
     )
     resp.raise_for_status()
     return resp.json().get("transcript") or ""
