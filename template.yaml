@@ -16,11 +16,22 @@ Globals:
     MemorySize: 1024
 
 Resources:
+  # Third-party packages, cross-installed for Linux arm64 on the host by `make lambda-deps` (uv).
+  # Building them inside Docker took 30+ minutes on the demo Mac; on the host it takes seconds.
+  Dependencies:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: .aws-sam-deps/layer
+      CompatibleRuntimes: [python3.12]
+      CompatibleArchitectures: [arm64]
+
   KabadiKhataApi:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src
       Handler: api.lambda_entry.handler
+      Layers:
+        - !Ref Dependencies
       Environment:
         Variables:
           MOCK_LLM: !Ref MockLlm

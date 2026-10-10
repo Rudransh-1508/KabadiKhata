@@ -47,7 +47,7 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
        MemorySize: 1024
        Runtime: python3.12
    ```
-   Build with `sam build --use-container` so cedarpy gets Linux wheels. The demo machine is an Apple Silicon Mac, so also set `Architectures: [arm64]` (x86 containers run under slow emulation). Keep a single collection request under ~25 s end to end, so it would also survive a real API Gateway's 29 s limit.
+   Third-party packages go in a Lambda layer that `make lambda-deps` cross-installs for Linux arm64 **on the host** with uv (pinned from `uv.lock`); do not go back to `sam build --use-container`, which took 30+ minutes because Docker's network on the demo Mac is ~40x slower. New runtime dependencies only need `pyproject.toml` + `uv.lock`. The demo machine is an Apple Silicon Mac, so also set `Architectures: [arm64]` (x86 containers run under slow emulation). Keep a single collection request under ~25 s end to end, so it would also survive a real API Gateway's 29 s limit.
 3. **Telegram voice notes are OGG/Opus.**
    - Convert to WAV (16 kHz mono) or MP3 **in the bot process on the laptop** (`pydub` plus a system ffmpeg) before calling `POST /collections`. The Lambda container has no ffmpeg.
    - Resize photos to ≤1024 px on the long side before base64-encoding.
@@ -88,7 +88,7 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
 - `make seed` creates the SQLite database, loads the synthetic world and copies it to OpenSearch if it's up
 - `make reindex` rebuilds the OpenSearch copy from SQLite
 - `make api` runs the FastAPI app
-- `make sam-invoke` runs `sam build --use-container` then `sam local invoke` on a fixture (for the video)
+- `make sam-invoke` builds the arm64 Lambda (deps layer built on the host) and runs two `sam local invoke`s for the video: a receipt written and a Cedar denial (~40 s)
 - `make bot` and `make console`
 - `make test`
 - `make demo` runs everything above in order (OpenSearch is skipped if Docker isn't running). **It must work from a fresh clone in ≤ 10 minutes.**

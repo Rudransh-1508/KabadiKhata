@@ -12,6 +12,7 @@ __pycache__/
 # local caches and build output
 .cache/
 .aws-sam/
+.aws-sam-deps/
 
 # local data
 data/*.db
