@@ -94,7 +94,8 @@ def read_photo(photo_b64: str) -> PhotoRead:
     if config.mock_llm():
         return stub_tools.read_photo(photo_b64)
     if not providers:
-        log.error("read_photo needs GEMINI_API_KEY or OPENAI_API_KEY")
+        log.error("read_photo needs a vision key: one of %s (or GROQ_API_KEYS); VISION_PROVIDER picks the first",
+                  ", ".join(config.VISION_KEYS.values()))
         return FAILED
 
     for provider in providers:  # first that answers wins; a down or rate-limited one falls through
