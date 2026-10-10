@@ -85,25 +85,40 @@ def read_photo(photo_b64: str) -> PhotoRead:
     if raw.startswith(b"fixture:"):
         return stub_tools.read_photo(photo_b64)
 
-    key = _cache_key(raw)
-    cached = _cache_get(key)
-    if cached is not None:
-        return cached
+    providers = config.vision_providers()
+    for provider in providers:  # any provider's earlier answer for this photo replays
+        cached = _cache_get(_cache_key(raw, provider))
+        if cached is not None:
+            return cached
     if config.mock_llm():
         return stub_tools.read_photo(photo_b64)
+    if not providers:
+        log.error("read_photo needs GEMINI_API_KEY or OPENAI_API_KEY")
+        return FAILED
 
-    try:
-        answer = _ask_gemini(raw)
-    except KeyError:
-        log.error("read_photo needs GEMINI_API_KEY: photo reading always uses Gemini, whatever LLM_PROVIDER is")
-        return FAILED
-    except Exception as exc:  # fail closed: the agent asks for a clearer photo
-        log.warning("read_photo model call failed: %s", type(exc).__name__)
-        return FAILED
-    result = parse_answer(answer)
-    if result != FAILED:  # a bad reply is asked again next time, never replayed
-        _cache_put(key, answer)
-    return result
+    for provider in providers:  # first that answers wins; a down or rate-limited one falls through
+        try:
+            answer = ASK[provider](raw)
+        except KeyError:
+            log.error("read_photo: no API key for %s", provider)
+            continue
+        except Exception as exc:
+            log.warning("read_photo %s call failed: %s", provider, type(exc).__name__)
+            continue
+        result = parse_answer(answer)
+        if result != FAILED:  # a bad reply is asked again next time, never replayed
+            _cache_put(_cache_key(raw, provider), answer)
+            return result
+    return FAILED  # fail closed: the agent asks for a clearer photo
+
+
+def is_cached(raw: bytes) -> bool:
+    """True when some configured provider has a usable stored answer for these exact bytes."""
+    return any(_cache_get(_cache_key(raw, p)) is not None for p in config.vision_providers())
+
+
+def model_tags() -> str:
+    return ", ".join(_model_tag(p) for p in config.vision_providers()) or "none configured"
 
 
 # ---------- checking what the model said ----------
@@ -177,8 +192,8 @@ def _mime(raw: bytes) -> str:
 # ---------- the model call ----------
 
 def _ask_gemini(raw: bytes) -> str:
-    """Photo reading always uses Gemini vision (it needs GEMINI_API_KEY), even when the agent's
-    chat model is OpenAI (LLM_PROVIDER only picks the agent's model)."""
+    """Gemini vision. Which vision providers run is VISION_PROVIDER / the configured keys, never
+    LLM_PROVIDER (that only picks the agent's chat model)."""
     from google.genai import types
 
     client = _gemini_client(os.environ["GEMINI_API_KEY"], int(config.perception_timeout_s() * 1000))
@@ -194,11 +209,48 @@ def _ask_gemini(raw: bytes) -> str:
     return resp.text or ""
 
 
+def _ask_openai(raw: bytes) -> str:
+    """OpenAI vision (chat completions with an image), same prompt and JSON contract as Gemini."""
+    import base64
+
+    import httpx
+
+    resp = httpx.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"},
+        json={
+            "model": config.openai_vision_model_id(),
+            "temperature": 0,
+            "response_format": {"type": "json_object"},
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": [
+                    {"type": "text", "text": USER_PROMPT},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:{_mime(raw)};base64,{base64.b64encode(raw).decode()}"}},
+                ]},
+            ],
+        },
+        timeout=config.perception_timeout_s(),
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"] or ""
+
+
+ASK = {"gemini": lambda raw: _ask_gemini(raw), "openai": lambda raw: _ask_openai(raw)}
+
+
 # ---------- disk cache ----------
 
-def _cache_key(raw: bytes) -> str:
+def _model_tag(provider: str) -> str:
+    model = config.openai_vision_model_id() if provider == "openai" else config.gemini_model_id()
+    return f"{provider}:{model}"
+
+
+def _cache_key(raw: bytes, provider: str = "gemini") -> str:
     h = hashlib.sha256(raw)
-    h.update(f"|{PROMPT_VERSION}|{config.gemini_model_id()}".encode())
+    tag = config.gemini_model_id() if provider == "gemini" else _model_tag(provider)  # gemini keys unchanged
+    h.update(f"|{PROMPT_VERSION}|{tag}".encode())
     return h.hexdigest()
 
 
@@ -217,5 +269,4 @@ def _cache_get(key: str) -> Optional[PhotoRead]:
 
 
 def _cache_put(key: str, answer: str) -> None:
-    jsoncache.write_json(_cache_path(key), {"raw_answer": answer, "prompt_version": PROMPT_VERSION,
-                                            "model_id": config.gemini_model_id()})
+    jsoncache.write_json(_cache_path(key), {"raw_answer": answer, "prompt_version": PROMPT_VERSION})

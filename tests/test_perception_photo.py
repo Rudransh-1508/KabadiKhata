@@ -15,6 +15,9 @@ def b64(data: bytes) -> str:
 def isolated_cache(tmp_path, monkeypatch):
     monkeypatch.setenv("KK_CACHE_DIR", str(tmp_path))
     monkeypatch.setenv("LLM_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("VISION_PROVIDER", raising=False)
     photo._gemini_client.cache_clear()
     yield
     photo._gemini_client.cache_clear()
@@ -203,3 +206,60 @@ def test_a_garbled_dial_gives_no_reading():
 def test_digital_and_beam_scales_skip_the_dial_check():
     assert parse_answer(answer(scale_type="digital", dial_numbers=[], reading=7.5)).kg == 7.5
     assert parse_answer(answer(scale_type="beam_balance", dial_numbers=[], reading=3)).kg == 3.0
+
+
+
+# ---------- OpenAI vision and fallback ----------
+
+def test_openai_reads_the_photo_when_it_is_the_only_key(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.delenv("GEMINI_API_KEY")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: pytest.fail("gemini has no key"))
+    monkeypatch.setattr(photo, "_ask_openai", lambda raw: answer(reading=9))
+    assert photo.read_photo(b64(b"\xff\xd8 openai only")).kg == 9.0
+
+
+def test_falls_back_to_openai_when_gemini_is_down(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+
+    def busy(raw):
+        raise ConnectionError("503")
+
+    monkeypatch.setattr(photo, "_ask_gemini", busy)
+    monkeypatch.setattr(photo, "_ask_openai", lambda raw: answer(reading=11))
+    img = b64(b"\xff\xd8 gemini down")
+    assert photo.read_photo(img).kg == 11.0
+    monkeypatch.setenv("MOCK_LLM", "1")  # the fallback's answer replays offline too
+    assert photo.read_photo(img).kg == 11.0
+
+
+def test_vision_provider_setting_picks_the_first(monkeypatch):
+    from common import config
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    assert config.vision_providers() == ["gemini", "openai"]
+    monkeypatch.setenv("VISION_PROVIDER", "openai")
+    assert config.vision_providers() == ["openai", "gemini"]
+    monkeypatch.delenv("OPENAI_API_KEY")
+    monkeypatch.setenv("GEMINI_API_KEY", "your-gemini-key")
+    assert config.vision_providers() == ["openai"]  # chosen explicitly; placeholder keys don't count
+
+
+def test_openai_request_shape_and_timeout(monkeypatch):
+    import httpx
+    seen = {}
+
+    def fake_post(url, **kw):
+        seen.update(url=url, **kw)
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=5)}}]},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("PERCEPTION_TIMEOUT_S", "9")
+    assert parse_answer(photo._ask_openai(b"\xff\xd8 jpeg")).kg == 5.0
+    body = seen["json"]
+    assert seen["timeout"] == 9.0 and body["temperature"] == 0
+    assert body["response_format"] == {"type": "json_object"}
+    assert body["messages"][1]["content"][1]["image_url"]["url"].startswith("data:image/jpeg;base64,")

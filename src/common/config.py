@@ -64,3 +64,22 @@ def voice_provider() -> str:
 
 def sarvam_stt_model_id() -> str:
     return os.getenv("SARVAM_STT_MODEL_ID", "saaras:v4")
+
+
+def _real_key(name: str) -> bool:
+    key = os.getenv(name, "").strip()
+    return bool(key) and not key.startswith("your-")
+
+
+def vision_providers() -> list[str]:
+    """Who reads scale photos, in the order to try: the first that answers wins. VISION_PROVIDER
+    (gemini | openai) picks the first; the other follows as a fallback when its key is set. Unset:
+    Gemini, then OpenAI, whichever have real keys."""
+    keys = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY"}
+    first = os.getenv("VISION_PROVIDER", "").strip().lower()
+    order = [first] + [p for p in keys if p != first] if first in keys else list(keys)
+    return [p for i, p in enumerate(order) if (i == 0 and first in keys) or _real_key(keys[p])]
+
+
+def openai_vision_model_id() -> str:
+    return os.getenv("OPENAI_VISION_MODEL_ID", os.getenv("OPENAI_MODEL_ID", "gpt-4o-mini")).strip()
