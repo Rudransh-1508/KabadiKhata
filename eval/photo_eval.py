@@ -60,6 +60,8 @@ def main() -> int:
         for name, key in photo.config.VISION_KEYS.items():
             if name != args.provider:
                 os.environ[key] = ""
+        if args.provider != "groq":
+            os.environ["GROQ_API_KEYS"] = ""  # Groq's rotating keys count too
 
     rows = [r for r in csv.DictReader(LABELS.open(encoding="utf-8")) if split in ("all", r["split"])]
     unlabelled = [r["file"] for r in rows if r["readable"] not in ("yes", "no")
