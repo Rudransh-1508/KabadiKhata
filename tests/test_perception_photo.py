@@ -17,6 +17,7 @@ def isolated_cache(tmp_path, monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "gemini")
     monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("XAI_API_KEY", raising=False)
     monkeypatch.delenv("VISION_PROVIDER", raising=False)
     photo._gemini_client.cache_clear()
     yield
@@ -263,3 +264,36 @@ def test_openai_request_shape_and_timeout(monkeypatch):
     assert seen["timeout"] == 9.0 and body["temperature"] == 0
     assert body["response_format"] == {"type": "json_object"}
     assert body["messages"][1]["content"][1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+
+
+
+def test_grok_reads_the_photo_and_is_a_fallback(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("XAI_API_KEY", "test-xai-key")
+    from common import config
+    assert config.vision_providers() == ["gemini", "xai"]
+
+    def busy(raw):
+        raise ConnectionError("503")
+
+    monkeypatch.setattr(photo, "_ask_gemini", busy)
+    monkeypatch.setattr(photo, "_ask_xai", lambda raw: "```json\n" + answer(reading=14) + "\n```")
+    assert photo.read_photo(b64(b"\xff\xd8 grok")).kg == 14.0
+    monkeypatch.setenv("VISION_PROVIDER", "xai")
+    assert config.vision_providers()[0] == "xai"
+
+
+def test_grok_request_goes_to_xai_without_json_mode(monkeypatch):
+    import httpx
+    seen = {}
+
+    def fake_post(url, **kw):
+        seen.update(url=url, **kw)
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=3)}}]},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setenv("XAI_API_KEY", "test-xai-key")
+    assert parse_answer(photo._ask_xai(b"\xff\xd8 jpeg")).kg == 3.0
+    assert seen["url"] == "https://api.x.ai/v1/chat/completions"
+    assert "response_format" not in seen["json"] and seen["json"]["model"] == "grok-4.7"

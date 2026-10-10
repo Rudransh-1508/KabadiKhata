@@ -210,40 +210,53 @@ def _ask_gemini(raw: bytes) -> str:
 
 
 def _ask_openai(raw: bytes) -> str:
-    """OpenAI vision (chat completions with an image), same prompt and JSON contract as Gemini."""
+    """OpenAI vision (chat completions with the image, JSON mode)."""
+    return _ask_chat_completions(raw, "https://api.openai.com/v1", os.environ["OPENAI_API_KEY"],
+                                 config.openai_vision_model_id(), json_mode=True)
+
+
+def _ask_xai(raw: bytes) -> str:
+    """xAI Grok vision: the same OpenAI-compatible API at api.x.ai. Its docs don't promise a JSON
+    mode, so none is requested; parse_answer copes with plain or fenced JSON."""
+    return _ask_chat_completions(raw, "https://api.x.ai/v1", os.environ["XAI_API_KEY"],
+                                 config.xai_vision_model_id(), json_mode=False)
+
+
+def _ask_chat_completions(raw: bytes, base_url: str, api_key: str, model: str, json_mode: bool) -> str:
+    """Same prompt and JSON contract as Gemini, for any OpenAI-compatible chat-completions API."""
     import base64
 
     import httpx
 
-    resp = httpx.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"},
-        json={
-            "model": config.openai_vision_model_id(),
-            "temperature": 0,
-            "response_format": {"type": "json_object"},
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": [
-                    {"type": "text", "text": USER_PROMPT},
-                    {"type": "image_url", "image_url": {
-                        "url": f"data:{_mime(raw)};base64,{base64.b64encode(raw).decode()}"}},
-                ]},
-            ],
-        },
-        timeout=config.perception_timeout_s(),
-    )
+    body = {
+        "model": model,
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": [
+                {"type": "text", "text": USER_PROMPT},
+                {"type": "image_url", "image_url": {
+                    "url": f"data:{_mime(raw)};base64,{base64.b64encode(raw).decode()}"}},
+            ]},
+        ],
+    }
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+    resp = httpx.post(f"{base_url}/chat/completions", headers={"Authorization": f"Bearer {api_key}"},
+                      json=body, timeout=config.perception_timeout_s())
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"] or ""
 
 
-ASK = {"gemini": lambda raw: _ask_gemini(raw), "openai": lambda raw: _ask_openai(raw)}
+ASK = {"gemini": lambda raw: _ask_gemini(raw), "openai": lambda raw: _ask_openai(raw),
+       "xai": lambda raw: _ask_xai(raw)}
 
 
 # ---------- disk cache ----------
 
 def _model_tag(provider: str) -> str:
-    model = config.openai_vision_model_id() if provider == "openai" else config.gemini_model_id()
+    model = {"openai": config.openai_vision_model_id, "xai": config.xai_vision_model_id}.get(
+        provider, config.gemini_model_id)()
     return f"{provider}:{model}"
 
 
