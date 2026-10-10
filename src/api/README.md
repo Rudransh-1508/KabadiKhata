@@ -57,6 +57,8 @@ Principals are `Actor::"<X-Principal>"`. Resources are dicts; entity references 
 
 Receipts at or after a break in their Chain don't count as Verified inflow.
 
+**R1 threshold stays at 1.17** (P1's sweep, [`eval/RESULTS_radar.md`](../../eval/RESULTS_radar.md)): over-claims of 1.5x and above are caught every time with 0/1440 false flags on honest recyclers (±15% noise). 1.15 would catch slightly more 1.2x cases (67% vs 62%) but sits right on the noise edge, and real-world noise is unknown. Off-system purchases are handled by the verified-backed %, not a lower threshold.
+
 ## Demo commands
 
 ```bash
