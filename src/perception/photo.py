@@ -26,7 +26,7 @@ from perception._shared import to_float as _float
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = "photo-v3"
+PROMPT_VERSION = "photo-v4"
 SCALE_TYPES = {"hanging_dial", "tubular_spring", "dial_platform", "digital", "beam_balance"}
 ANALOG = {"hanging_dial", "tubular_spring", "dial_platform"}   # read from printed numbers, which code checks
 MAX_KG = 500.0
@@ -41,17 +41,21 @@ Return JSON only, with these keys:
   unit: "kg", "g" or "lb" (the unit printed on the dial or display), or null
   material: what is being weighed, one of {list(MATERIALS)}
   confidence: 0 to 1, how sure you are of the reading
-  dial_numbers: for a dial or column scale, the major numbers printed on it, copied exactly as
-    printed, in scale order (a round dial: clockwise starting at the top; a column: from the 0
+  dial_numbers: for a dial or column scale, the major numbers printed on it, copied character by
+    character exactly as printed, even if they repeat, skip or look wrong (do NOT correct them to
+    what a normal scale would show), in scale order (a round dial: clockwise starting at the top; a column: from the 0
     end). Include repeats and odd numbers if they are printed. [] for digital or beam scales.
   other_column: for a column scale with numbers on both sides, the other side's numbers in the
     same order, copied exactly; otherwise null.
   notes: one short sentence on anything that made the reading hard
 
 How to read each scale:
-- hanging_dial / dial_platform: read where the needle points. Use the printed numbers and the
-  small ticks between them. Check the dial's maximum (e.g. "50 kg") so you know the units.
-- tubular_spring: read where the red marker or pointer sits on the printed column.
+- hanging_dial / dial_platform: find the needle's POINTED TIP (the long thin end, away from the
+  centre); ignore its short tail on the other side of the centre. Read where the tip points, using
+  the printed numbers on either side of it and the small ticks between them: count the ticks from
+  the nearest lower number. Check the dial's maximum (e.g. "50 kg") so you know the units.
+- tubular_spring: read where the red marker or pointer sits on the printed column: take the
+  nearest printed number and count the small ticks up or down from it.
 - digital: read the display exactly, including the decimal point. Check for "kg", "lb" or "g".
 - beam_balance (tarazu with two pans): the weight is the sum of the iron weights (batte) in the
   pan opposite the goods, and only if the beam is level. If the beam tilts, reading is null.
