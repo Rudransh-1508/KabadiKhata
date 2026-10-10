@@ -39,8 +39,8 @@ def test_freeze_exports_answers_that_replay_on_another_machine(isolated, monkeyp
     monkeypatch.setattr(voice, "_ask_sarvam", lambda raw: "बारह किलो बोतल")
 
     assert freeze_demo.freeze(img, note, as_bot=False) == 0
-    frozen = json.loads((isolated / "demo" / "frozen.json").read_text())
-    assert frozen["photo_read"]["kg"] == 12.0 and frozen["voice"]["claimed_kg"] == 12.0
+    frozen = json.loads((isolated / "demo" / "frozen.json").read_text())["inputs"]
+    assert frozen[0]["photo_read"]["kg"] == 12.0 and frozen[0]["voice"]["claimed_kg"] == 12.0
     assert len(list((isolated / "demo" / "cache").rglob("*.json"))) == 2
 
     # The demo laptop: empty cache, models unreachable, MOCK_LLM=1
@@ -69,3 +69,25 @@ def test_nothing_is_frozen_while_the_model_is_down(isolated, monkeypatch):
     monkeypatch.setattr(photo, "_ask_gemini", down)
     assert freeze_demo.freeze(img, None, as_bot=False) == 1
     assert not (isolated / "demo" / "cache").exists()
+
+
+def test_the_refusal_photo_can_be_frozen_on_purpose(isolated, monkeypatch):
+    img = isolated / "watch.jpg"
+    img.write_bytes(b"\xff\xd8 a wrist watch")
+    no_scale = json.dumps({"scale_type": "none", "reading": None, "unit": None, "material": "unknown",
+                           "confidence": 0.9, "dial_numbers": [], "other_column": None})
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: no_scale)
+    assert freeze_demo.freeze(img, None, as_bot=False) == 1                      # not by accident
+    assert freeze_demo.freeze(img, None, as_bot=False, expect_refusal=True) == 0  # on purpose
+    monkeypatch.setenv("MOCK_LLM", "1")
+    assert photo.read_photo(base64.b64encode(img.read_bytes()).decode()).kg is None
+
+
+def test_every_frozen_input_is_kept_in_the_manifest(isolated, monkeypatch):
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: reading(12 if b"one" in raw else 20))
+    for name in ("one", "two", "one"):  # re-freezing "one" replaces its entry, doesn't duplicate it
+        img = isolated / f"{name}.jpg"
+        img.write_bytes(b"\xff\xd8 " + name.encode())
+        assert freeze_demo.freeze(img, None, as_bot=False) == 0
+    inputs = json.loads((isolated / "demo" / "frozen.json").read_text())["inputs"]
+    assert sorted(e["photo"] for e in inputs) == ["one.jpg", "two.jpg"]

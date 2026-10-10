@@ -3,10 +3,13 @@
     1. Rehearse the demo once through Telegram with real models (MOCK_LLM=0 make api + make bot).
        The API saves every photo it receives as data/photos/<sha256>.jpg: the exact bytes
        read_photo sees (Telegram re-compresses photos, so the original file would not match).
-    2. uv run python eval/freeze_demo.py --latest [--audio note.wav]
+    2. uv run python eval/freeze_demo.py --list            (the photos the API received, newest first)
+       uv run python eval/freeze_demo.py --photo data/photos/<sha>.jpg [--audio note.wav]
        Reads the photo (and voice note) live once if not cached yet, then replays them with
        MOCK_LLM=1 and checks the answers are identical and come from the cache, not the stub.
-       Exports those cache entries to data/demo/cache/ (commit them) and writes data/demo/frozen.json.
+       Exports those cache entries to data/demo/cache/ (commit them) and records the input in
+       data/demo/frozen.json (one entry per input, so freeze each demo input in turn).
+       The deliberate "bad photo" for the refusal beat: add --expect-refusal (it must give no reading).
     3. On the demo laptop: uv run python eval/freeze_demo.py --install
        Copies data/demo/cache/ into the local cache, so MOCK_LLM=1 replays the real readings.
 
@@ -73,7 +76,7 @@ def install() -> int:
     return 0
 
 
-def freeze(photo_path: Path, audio_path: Path | None, as_bot: bool) -> int:
+def freeze(photo_path: Path, audio_path: Path | None, as_bot: bool, expect_refusal: bool = False) -> int:
     raw = photo_path.read_bytes()
     if as_bot:
         from bot.telegram_bot import resize_for_upload
@@ -84,8 +87,12 @@ def freeze(photo_path: Path, audio_path: Path | None, as_bot: bool) -> int:
     replay = _with_mock("1", photo.read_photo, _b64(raw))
     cache_file = _photo_cache_file(raw)
     print(f"Photo {photo_path.name}: kg={live.kg} material={live.material} confidence={live.confidence:.2f}")
-    if live.kg is None:
-        print("  ! no Scale reading: this photo would get the retake question. Pick a clearer one.")
+    if expect_refusal and live.kg is not None:
+        print("  ! expected no reading (refusal photo) but the model read one. Pick a photo with no scale.")
+        ok = False
+    elif not expect_refusal and live.kg is None:
+        print("  ! no Scale reading: this photo would get the retake question. Pick a clearer one,"
+              " or add --expect-refusal if that's the point.")
         ok = False
     if cache_file is None or replay != live:
         print(f"  ! replay differs or isn't cached (replay: {replay}). Run again when the model answers.")
@@ -93,7 +100,7 @@ def freeze(photo_path: Path, audio_path: Path | None, as_bot: bool) -> int:
 
     entry = {"photo": photo_path.name, "photo_sha256": hashlib.sha256(raw).hexdigest(),
              "photo_read": live.model_dump(), "photo_models": photo.model_tags(),
-             "photo_prompt": photo.PROMPT_VERSION, "files": []}
+             "photo_prompt": photo.PROMPT_VERSION, "expect_refusal": expect_refusal, "files": []}
     if cache_file:
         entry["files"].append(cache_file)
 
@@ -118,7 +125,16 @@ def freeze(photo_path: Path, audio_path: Path | None, as_bot: bool) -> int:
         shutil.copy2(f, dst)
     entry["frozen_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     DEMO.mkdir(parents=True, exist_ok=True)
-    (DEMO / "frozen.json").write_text(json.dumps(entry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    manifest = DEMO / "frozen.json"
+    inputs = []
+    if manifest.exists():
+        try:
+            inputs = json.loads(manifest.read_text(encoding="utf-8")).get("inputs", [])
+        except (ValueError, AttributeError):
+            inputs = []
+    same = (entry["photo_sha256"], entry.get("audio"))
+    inputs = [e for e in inputs if (e.get("photo_sha256"), e.get("audio")) != same] + [entry]
+    manifest.write_text(json.dumps({"inputs": inputs}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Frozen. Commit {EXPORT}/ and {DEMO / 'frozen.json'}; "
           "on the demo laptop run: uv run python eval/freeze_demo.py --install")
     return 0
@@ -127,26 +143,30 @@ def freeze(photo_path: Path, audio_path: Path | None, as_bot: bool) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     src = ap.add_mutually_exclusive_group(required=True)
-    src.add_argument("--latest", action="store_true", help="newest photo the API received (data/photos)")
-    src.add_argument("--photo", type=Path, help="a specific photo file")
+    src.add_argument("--list", action="store_true", help="show the photos the API received, newest first")
+    src.add_argument("--photo", type=Path, help="the photo to freeze (pick it from --list)")
     src.add_argument("--install", action="store_true", help="copy data/demo/cache into the local cache")
     ap.add_argument("--audio", type=Path, help="the demo voice note (WAV/OGG/MP3 as sent to the API)")
     ap.add_argument("--as-bot", action="store_true", help="resize --photo the way the bot does")
+    ap.add_argument("--expect-refusal", action="store_true",
+                    help="this is the deliberate bad photo: it must give no Scale reading")
     args = ap.parse_args()
     load_env()
 
     if args.install:
         return install()
-    if args.latest:
+    if args.list:
         photos = sorted(Path(os.getenv("KK_PHOTO_DIR", ROOT / "data" / "photos")).glob("*.jpg"),
-                        key=lambda p: p.stat().st_mtime)
+                        key=lambda p: p.stat().st_mtime, reverse=True)
         if not photos:
             print("No photos in data/photos yet: send the demo photo through the bot once (MOCK_LLM=0).")
             return 1
-        path = photos[-1]
-    else:
-        path = args.photo
-    return freeze(path, args.audio, args.as_bot)
+        for p in photos[:20]:
+            at = datetime.fromtimestamp(p.stat().st_mtime).strftime("%d %b %H:%M:%S")
+            print(f"{at}  {p}")
+        print("Freeze one with: uv run python eval/freeze_demo.py --photo <path> [--audio note.wav]")
+        return 0
+    return freeze(args.photo, args.audio, args.as_bot, args.expect_refusal)
 
 
 if __name__ == "__main__":
