@@ -51,7 +51,15 @@ def _cached(raw: bytes) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="heldout", choices=["heldout", "tune", "all"])
-    split = ap.parse_args().split
+    ap.add_argument("--provider", choices=sorted(photo.config.VISION_KEYS),
+                    help="score one vision provider only (no fallback); results get its name")
+    args = ap.parse_args()
+    split = args.split
+    if args.provider:  # only this provider's key counts, so no answer can come from a fallback
+        os.environ["VISION_PROVIDER"] = args.provider
+        for name, key in photo.config.VISION_KEYS.items():
+            if name != args.provider:
+                os.environ[key] = ""
 
     rows = [r for r in csv.DictReader(LABELS.open(encoding="utf-8")) if split in ("all", r["split"])]
     unlabelled = [r["file"] for r in rows if r["readable"] not in ("yes", "no")
@@ -64,7 +72,7 @@ def main() -> int:
               f"Model: {photo.model_tags()} (prompt {photo.PROMPT_VERSION})", ""]
     for set_id, set_rows in _by_set(rows).items():
         report += _score(set_id, set_rows)
-    out = Path(f"eval/RESULTS_photo_{split}.md")
+    out = Path(f"eval/RESULTS_photo_{split}{'_' + args.provider if args.provider else ''}.md")
     out.write_text("\n".join(report) + "\n", encoding="utf-8")
     print("\n".join(line for line in report if line.startswith(("##", "- "))))
     print(f"Wrote {out}")
