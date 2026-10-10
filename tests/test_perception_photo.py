@@ -18,6 +18,7 @@ def isolated_cache(tmp_path, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("XAI_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
     monkeypatch.delenv("VISION_PROVIDER", raising=False)
     photo._gemini_client.cache_clear()
     yield
@@ -297,3 +298,22 @@ def test_grok_request_goes_to_xai_without_json_mode(monkeypatch):
     assert parse_answer(photo._ask_xai(b"\xff\xd8 jpeg")).kg == 3.0
     assert seen["url"] == "https://api.x.ai/v1/chat/completions"
     assert "response_format" not in seen["json"] and seen["json"]["model"] == "grok-4.7"
+
+
+
+def test_groq_request_shape(monkeypatch):
+    import httpx
+    seen = {}
+
+    def fake_post(url, **kw):
+        seen.update(url=url, **kw)
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=6)}}]},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
+    assert parse_answer(photo._ask_groq(b"\xff\xd8 jpeg")).kg == 6.0
+    assert seen["url"] == "https://api.groq.com/openai/v1/chat/completions"
+    assert seen["json"]["response_format"] == {"type": "json_object"}
+    from common import config
+    assert config.vision_providers() == ["gemini", "groq"]

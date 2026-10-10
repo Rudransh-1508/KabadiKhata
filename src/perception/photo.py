@@ -215,6 +215,12 @@ def _ask_openai(raw: bytes) -> str:
                                  config.openai_vision_model_id(), json_mode=True)
 
 
+def _ask_groq(raw: bytes) -> str:
+    """Groq (OpenAI-compatible, api.groq.com): its vision model, with JSON mode."""
+    return _ask_chat_completions(raw, "https://api.groq.com/openai/v1", os.environ["GROQ_API_KEY"],
+                                 config.groq_vision_model_id(), json_mode=True)
+
+
 def _ask_xai(raw: bytes) -> str:
     """xAI Grok vision: the same OpenAI-compatible API at api.x.ai. Its docs don't promise a JSON
     mode, so none is requested; parse_answer copes with plain or fenced JSON."""
@@ -249,13 +255,14 @@ def _ask_chat_completions(raw: bytes, base_url: str, api_key: str, model: str, j
 
 
 ASK = {"gemini": lambda raw: _ask_gemini(raw), "openai": lambda raw: _ask_openai(raw),
-       "xai": lambda raw: _ask_xai(raw)}
+       "groq": lambda raw: _ask_groq(raw), "xai": lambda raw: _ask_xai(raw)}
 
 
 # ---------- disk cache ----------
 
 def _model_tag(provider: str) -> str:
-    model = {"openai": config.openai_vision_model_id, "xai": config.xai_vision_model_id}.get(
+    model = {"openai": config.openai_vision_model_id, "groq": config.groq_vision_model_id,
+             "xai": config.xai_vision_model_id}.get(
         provider, config.gemini_model_id)()
     return f"{provider}:{model}"
 

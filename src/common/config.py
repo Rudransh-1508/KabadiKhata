@@ -71,13 +71,14 @@ def _real_key(name: str) -> bool:
     return bool(key) and not key.startswith("your-")
 
 
-VISION_KEYS = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "xai": "XAI_API_KEY"}
+VISION_KEYS = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "groq": "GROQ_API_KEY",
+               "xai": "XAI_API_KEY"}
 
 
 def vision_providers() -> list[str]:
     """Who reads scale photos, in the order to try: the first that answers wins. VISION_PROVIDER
-    (gemini | openai | xai) picks the first; the others follow as fallbacks when their keys are set.
-    Unset: Gemini, then OpenAI, then xAI (Grok), whichever have real keys."""
+    (gemini | openai | groq | xai) picks the first; the others follow as fallbacks when their keys
+    are set. Unset: Gemini, OpenAI, Groq, then xAI (Grok), whichever have real keys."""
     first = os.getenv("VISION_PROVIDER", "").strip().lower()
     order = [first] + [p for p in VISION_KEYS if p != first] if first in VISION_KEYS else list(VISION_KEYS)
     return [p for i, p in enumerate(order) if (i == 0 and first in VISION_KEYS) or _real_key(VISION_KEYS[p])]
@@ -89,3 +90,7 @@ def openai_vision_model_id() -> str:
 
 def xai_vision_model_id() -> str:
     return os.getenv("XAI_VISION_MODEL_ID", "grok-4.7").strip()
+
+
+def groq_vision_model_id() -> str:
+    return os.getenv("GROQ_VISION_MODEL_ID", "qwen/qwen3.8-27b").strip()
