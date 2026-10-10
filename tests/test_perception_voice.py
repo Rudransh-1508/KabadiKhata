@@ -113,15 +113,28 @@ def test_sarvam_empty_transcript_fails_closed_and_is_not_cached(monkeypatch):
     assert len(calls) == 2  # a failure is retried next time, never replayed
 
 
-def test_providers_cache_separately(monkeypatch):
+def test_providers_cache_separately_but_either_answer_replays(monkeypatch):
     monkeypatch.setenv("MOCK_LLM", "0")
     monkeypatch.setattr(voice, "_ask_sarvam", lambda raw: "दस किलो लोहा")
-    monkeypatch.setattr(voice, "_ask_gemini", lambda raw: answer("दो किलो लोहा"))
+    monkeypatch.setattr(voice, "_ask_gemini", lambda raw: pytest.fail("re-asked though an answer is stored"))
     audio = b64(WAV + b"both")
+    assert voice._cache_key(WAV + b"both", "sarvam") != voice._cache_key(WAV + b"both", "gemini")
     monkeypatch.setenv("VOICE_PROVIDER", "sarvam")
     assert voice.transcribe(audio).claimed_kg == 10.0
-    monkeypatch.setenv("VOICE_PROVIDER", "gemini")
-    assert voice.transcribe(audio).claimed_kg == 2.0
+    monkeypatch.setenv("VOICE_PROVIDER", "gemini")  # e.g. the demo laptop has no Sarvam key
+    assert voice.transcribe_with_status(audio)[1] == "cached"
+
+
+def test_a_frozen_note_replays_without_the_key_it_was_made_with(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("SARVAM_API_KEY", "sk_real_123")
+    monkeypatch.delenv("VOICE_PROVIDER", raising=False)
+    monkeypatch.setattr(voice, "_ask_sarvam", lambda raw: "बीस किलो गत्ता")
+    audio = b64(WAV + b"frozen")
+    assert voice.transcribe(audio).claimed_kg == 20.0
+    monkeypatch.setenv("SARVAM_API_KEY", "")          # demo laptop: no key, offline replay
+    monkeypatch.setenv("MOCK_LLM", "1")
+    assert voice.transcribe(audio).claimed_kg == 20.0
 
 
 @pytest.mark.parametrize("key, provider", [("", "gemini"), ("your-sarvam-key", "gemini"), ("sk_real_123", "sarvam")])

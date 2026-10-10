@@ -88,10 +88,9 @@ def read_photo(photo_b64: str) -> PhotoRead:
         return stub_tools.read_photo(photo_b64)
 
     providers = config.vision_providers()
-    for provider in providers:  # any provider's earlier answer for this photo replays
-        cached = _cache_get(_cache_key(raw, provider))
-        if cached is not None:
-            return cached
+    cached = _any_cached(raw)  # any provider's earlier answer replays, key or no key (frozen demo inputs)
+    if cached is not None:
+        return cached
     if config.mock_llm():
         return stub_tools.read_photo(photo_b64)
     if not providers:
@@ -114,9 +113,33 @@ def read_photo(photo_b64: str) -> PhotoRead:
     return FAILED  # fail closed: the agent asks for a clearer photo
 
 
+def _replay_order() -> list[str]:
+    """Configured providers first, then every other known one: a stored answer must replay on a
+    machine that doesn't have the key it was made with (the demo laptop, MOCK_LLM=1)."""
+    first = config.vision_providers()
+    return first + [p for p in config.VISION_KEYS if p not in first]
+
+
+def _any_cached(raw: bytes) -> Optional[PhotoRead]:
+    for provider in _replay_order():
+        cached = _cache_get(_cache_key(raw, provider))
+        if cached is not None:
+            return cached
+    return None
+
+
+def cache_file(raw: bytes) -> Optional[str]:
+    """The stored answer replayed for these bytes, if any (the same lookup read_photo uses)."""
+    for provider in _replay_order():
+        path = _cache_path(_cache_key(raw, provider))
+        if _cache_get(_cache_key(raw, provider)) is not None:
+            return path
+    return None
+
+
 def is_cached(raw: bytes) -> bool:
-    """True when some configured provider has a usable stored answer for these exact bytes."""
-    return any(_cache_get(_cache_key(raw, p)) is not None for p in config.vision_providers())
+    """True when a usable stored answer exists for these exact bytes, from any provider."""
+    return _any_cached(raw) is not None
 
 
 def model_tags() -> str:

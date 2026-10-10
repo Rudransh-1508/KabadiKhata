@@ -384,3 +384,18 @@ def test_all_keys_spent_falls_through_to_the_next_provider(monkeypatch):
     _groq_server(monkeypatch, {"k1", "k2"})
     monkeypatch.setattr(photo, "_ask_gemini", lambda raw: answer(reading=8))
     assert photo.read_photo(b64(b"\xff\xd8 all spent")).kg == 8.0
+
+
+
+def test_a_frozen_photo_replays_on_a_laptop_without_any_key(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("VISION_PROVIDER", "groq")
+    monkeypatch.setenv("GROQ_API_KEYS", "k1")
+    monkeypatch.setattr(photo, "_ask_groq", lambda raw: answer(reading=17))
+    img = b64(b"\xff\xd8 demo photo")
+    assert photo.read_photo(img).kg == 17.0
+    for k in ("GROQ_API_KEYS", "GEMINI_API_KEY", "VISION_PROVIDER"):  # the demo laptop
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("MOCK_LLM", "1")
+    assert photo.read_photo(img).kg == 17.0
+    assert photo.is_cached(photo._decode(img))

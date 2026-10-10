@@ -38,16 +38,13 @@ def _b64(raw: bytes) -> str:
 
 
 def _photo_cache_file(raw: bytes) -> Path | None:
-    for provider in config.vision_providers():
-        p = Path(photo._cache_path(photo._cache_key(raw, provider)))
-        if p.exists():
-            return p
-    return None
+    path = photo.cache_file(raw)
+    return Path(path) if path else None
 
 
 def _voice_cache_file(raw: bytes) -> Path | None:
-    p = Path(voice._cache_path(voice._cache_key(raw)))
-    return p if p.exists() else None
+    path = voice.cache_file(raw)
+    return Path(path) if path else None
 
 
 def _with_mock(flag: str, fn, *args):
