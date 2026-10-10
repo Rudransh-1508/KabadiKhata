@@ -94,14 +94,17 @@ speech-to-text writes the transcript; code (`src/perception/hinglish.py`) reads 
 - **Weight right on 64 of 64 synthetic clips.**
 - Material right on 30/30 clips in Sarvam Bulbul voices, 28/30 in the macOS Hindi voice, 3/4 in Gemini voices.
 
-**Photo → Scale reading** (`eval/photo_eval.py`). _[TODO: P1 — held-out number, scored once after tuning, with n.]_
-Photos are the team's 30 AI-generated kabadi scale images ([Kaggle](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala)),
-split 20 for tuning and 10 held out (6 readable dials, 4 dials the image generator garbled), labelled by a person.
-What we found while tuning, so you don't have to:
-- Material is reliable (12/12 on the tuning split).
-- Dial readings are often a tick or two off, so we also report "within ±1 kg" next to the ±5% bar.
-- Shown a garbled AI-drawn dial, the model "corrects" the numbers and reads it anyway; a real dial isn't garbled, but this is why
-  the agent also compares the photo with what the kabadiwala tapped or said before writing anything.
+**Photo → Scale reading** (`eval/photo_eval.py`, scored once on the held-out split). Photos are the team's 30
+AI-generated kabadi scale images ([Kaggle](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala)), split 20 for tuning and
+10 held out, labelled by a person. Read by Groq `qwen/qwen3.8-27b` (prompt v4); n = 10, 6 with a readable dial:
+- **kg within ±5%: 2 of 6.** Within ±5% or ±1 kg (about one dial tick): 4 of 6. One large miss (25 kg read as 1.5).
+- **Material right: 9 of 10.**
+- 4 of the held-out dials were garbled by the image generator; the model refused only 1 of them. Shown a broken dial, it
+  "corrects" the printed numbers and reads it anyway.
+
+What this means for the design: the photo reading is never trusted alone. The agent writes a Receipt only when the Scale
+reading and the kabadiwala's Stated weight (taps or voice) agree within 10%; otherwise it asks one question in Hindi and
+writes nothing. A misread photo costs a question, not a false Receipt.
 
 ## Honesty & limitations
 - All seeded data is labelled **synthetic**; prices in `data/ratecard.json` are **indicative** (not the pitch).
@@ -117,7 +120,7 @@ What we found while tuning, so you don't have to:
 - Libraries: python-telegram-bot, Pillow, qrcode, pydub, Streamlit, pandas, FastAPI, Uvicorn, Mangum, opensearch-py, httpx, honcho, Strands Agents, cedarpy (see each project's licence). OpenSearch runs from the `opensearchproject/opensearch` image (Apache-2.0).
 - **Eval photos:** "kabadiwala" dataset by the team (Apache-2.0), [kaggle.com/datasets/oneshikaaa/kabadiwala](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala). AI-generated images, labelled synthetic. _[TODO: P1 — name the image generators used.]_
 - **Speech:** [Sarvam AI](https://www.sarvam.ai) Saaras (speech-to-text, used by `transcribe`) and Bulbul (text-to-speech, synthetic eval clips) via their API; the macOS "Lekha" Hindi voice for more synthetic clips.
-- **Vision:** Google Gemini (`gemini-flash-latest`) via the `google-genai` SDK reads the scale photo; Gemini is also the fallback transcriber.
+- **Vision:** [Groq](https://groq.com) serving `qwen/qwen3.8-27b` reads the scale photo, with Google Gemini (`gemini-flash-latest`, via the `google-genai` SDK) as the fallback; OpenAI and xAI Grok are optional further fallbacks. Gemini is also the fallback transcriber.
 
 ## Team
 P1 ML/Perception · P2 Agent & Policy · P3 Backend & Data · P4 Product/UX & Story. _[TODO: names.]_
