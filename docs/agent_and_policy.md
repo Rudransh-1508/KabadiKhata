@@ -105,6 +105,7 @@ cd src && MOCK_LLM=1 python -m agent.demo       # trace table for a pass and a m
 make seed                          # data/kk.db: the synthetic world file when present, else the built-in sample world
 make api                           # API on port 3000
 python scripts/smoke_real_llm.py   # real-LLM check (needs a key)
+make redteam                       # every attack against the real code -> docs/redteam_scorecard.md
 ```
 
 `MOCK_LLM=1` drives the real Strands loop with a scripted model, so nothing calls the network. The tests are offline.
@@ -179,6 +180,12 @@ curl -i -H 'X-Principal: br-1' 'localhost:3000/receipts?collector_id=kw-raju'
 To list a Brand's own Certificates first: `curl -H 'X-Principal: br-1' 'localhost:3000/certificates?brand_id=br-1'`. Without a seeded database, the same two calls are exercised offline by `MOCK_LLM=1 python -m pytest -q tests/test_api.py tests/test_policy.py tests/test_docs.py`.
 
 Show the red "Denied by Cedar policy" banner in the console (P4) over the same 403, then cut to `src/policy/policies.cedar` (`kabadiwala-own-data` and `brand-own-certificates`) for two seconds. Say: "Default deny. A brand can verify its plastic's origin, never the Kabadiwala's identity."
+
+### Red-team scorecard (about 10 s, after beat 4)
+
+`make redteam` runs 47 attacks against the real code: lying at the scale, prompt injection, a **compromised model** that does whatever an attacker wants inside the real Strands loop, Cedar access attempts, ledger rewrites and radar evasion. It also runs 3 honest controls that must still pass, and shows 3 known limits that get through, each with what would catch it. Each attack gets its own fresh ledger; whether the attacker won is decided from facts (HTTP status, ledger rows, `/verify`, Flags), never from model text. Code: `src/agent/redteam.py`. Committed result: `docs/redteam_scorecard.md` (a test fails if it goes stale).
+
+Show the terminal table scrolling, then hold on the headline and the *Compromised model* rows. Say: "We attacked our own system 47 ways. Even if the model is fully hijacked, it can't write a wrong Receipt." `python -m agent.redteam --real` runs the scale and injection rows against the real model; use it for the clip if a key is set.
 
 ## 7. Known limitations
 
