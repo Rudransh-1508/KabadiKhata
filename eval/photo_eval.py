@@ -45,7 +45,7 @@ def as_bot_sends(path: Path) -> bytes:
 
 
 def _cached(raw: bytes) -> bool:
-    return os.path.exists(photo._cache_path(photo._cache_key(raw)))
+    return photo.is_cached(raw)
 
 
 def main() -> int:
@@ -61,7 +61,7 @@ def main() -> int:
         return 1
 
     report = [f"# read_photo eval: {split} split", "",
-              f"Model: {photo.config.gemini_model_id()} (prompt {photo.PROMPT_VERSION})", ""]
+              f"Model: {photo.model_tags()} (prompt {photo.PROMPT_VERSION})", ""]
     for set_id, set_rows in _by_set(rows).items():
         report += _score(set_id, set_rows)
     out = Path(f"eval/RESULTS_photo_{split}.md")
