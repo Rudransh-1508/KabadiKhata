@@ -260,7 +260,7 @@ def test_openai_request_shape_and_timeout(monkeypatch):
         return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=5)}}]},
                               request=httpx.Request("POST", url))
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(photo, "_http_post", fake_post)
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     monkeypatch.setenv("PERCEPTION_TIMEOUT_S", "9")
     assert parse_answer(photo._ask_openai(b"\xff\xd8 jpeg")).kg == 5.0
@@ -296,7 +296,7 @@ def test_grok_request_goes_to_xai_without_json_mode(monkeypatch):
         return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=3)}}]},
                               request=httpx.Request("POST", url))
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(photo, "_http_post", fake_post)
     monkeypatch.setenv("XAI_API_KEY", "test-xai-key")
     assert parse_answer(photo._ask_xai(b"\xff\xd8 jpeg")).kg == 3.0
     assert seen["url"] == "https://api.x.ai/v1/chat/completions"
@@ -313,7 +313,7 @@ def test_groq_request_shape(monkeypatch):
         return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=6)}}]},
                               request=httpx.Request("POST", url))
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(photo, "_http_post", fake_post)
     monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
     assert parse_answer(photo._ask_groq(b"\xff\xd8 jpeg")).kg == 6.0
     assert seen["url"] == "https://api.groq.com/openai/v1/chat/completions"
@@ -338,7 +338,7 @@ def _groq_server(monkeypatch, exhausted: set):
             return httpx.Response(429, headers={"retry-after": "30"}, json={"error": "rate"}, request=req)
         return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=7)}}]}, request=req)
 
-    monkeypatch.setattr(httpx, "post", fake_post)
+    monkeypatch.setattr(photo, "_http_post", fake_post)
     return used
 
 
@@ -399,3 +399,8 @@ def test_a_frozen_photo_replays_on_a_laptop_without_any_key(monkeypatch):
     monkeypatch.setenv("MOCK_LLM", "1")
     assert photo.read_photo(img).kg == 17.0
     assert photo.is_cached(photo._decode(img))
+
+
+
+def test_chat_completion_providers_share_one_http_client():
+    assert photo._http_client() is photo._http_client()

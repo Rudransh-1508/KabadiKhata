@@ -10,6 +10,7 @@ else falls back to the stub reading. Fixture payloads ("fixture:...") always go 
 """
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import logging
@@ -299,8 +300,6 @@ def _ask_chat_completions(raw: bytes, base_url: str, api_key: str, model: str, j
     """Same prompt and JSON contract as Gemini, for any OpenAI-compatible chat-completions API."""
     import base64
 
-    import httpx
-
     body = {
         "model": model,
         "temperature": 0,
@@ -315,10 +314,23 @@ def _ask_chat_completions(raw: bytes, base_url: str, api_key: str, model: str, j
     }
     if json_mode:
         body["response_format"] = {"type": "json_object"}
-    resp = httpx.post(f"{base_url}/chat/completions", headers={"Authorization": f"Bearer {api_key}"},
+    resp = _http_post(f"{base_url}/chat/completions", headers={"Authorization": f"Bearer {api_key}"},
                       json=body, timeout=config.perception_timeout_s())
     resp.raise_for_status()
     return resp.json()["choices"][0]["message"]["content"] or ""
+
+
+@functools.lru_cache(maxsize=1)
+def _http_client():
+    """One pooled HTTP client for the chat-completions providers, so each photo (and each Groq key
+    tried) reuses an open connection instead of a new TLS handshake. Timeouts are per request."""
+    import httpx
+
+    return httpx.Client()
+
+
+def _http_post(url: str, **kw):
+    return _http_client().post(url, **kw)
 
 
 ASK = {"gemini": lambda raw: _ask_gemini(raw), "openai": lambda raw: _ask_openai(raw),
