@@ -34,6 +34,16 @@ def perception_timeout_s() -> float:
     return v if 0 < v < float("inf") else 10.0
 
 
+def agent_timeout_s() -> float:
+    """Per-call limit for the agent's own model calls (tool-selection turns, about 1 to 2 s when healthy).
+    6 s leaves room for two perception calls of PERCEPTION_TIMEOUT_S around one hung turn (CLAUDE.md #2)."""
+    try:
+        v = float(os.getenv("AGENT_TIMEOUT_S", "6"))
+    except ValueError:
+        return 6.0
+    return v if 0 < v < float("inf") else 6.0
+
+
 def explain_timeout_s() -> float:
     try:
         v = float(os.getenv("LLM_EXPLAIN_TIMEOUT_S", "20"))
