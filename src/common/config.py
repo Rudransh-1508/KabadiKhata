@@ -75,13 +75,28 @@ VISION_KEYS = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "groq": "
                "xai": "XAI_API_KEY"}
 
 
+def groq_api_keys() -> list[str]:
+    """All Groq keys to rotate through: GROQ_API_KEYS (comma-separated) then GROQ_API_KEY,
+    placeholders and duplicates dropped, order kept."""
+    raw = os.getenv("GROQ_API_KEYS", "").split(",") + [os.getenv("GROQ_API_KEY", "")]
+    keys: list[str] = []
+    for k in (k.strip() for k in raw):
+        if k and not k.startswith("your-") and k not in keys:
+            keys.append(k)
+    return keys
+
+
+def _has_key(provider: str) -> bool:
+    return bool(groq_api_keys()) if provider == "groq" else _real_key(VISION_KEYS[provider])
+
+
 def vision_providers() -> list[str]:
     """Who reads scale photos, in the order to try: the first that answers wins. VISION_PROVIDER
     (gemini | openai | groq | xai) picks the first; the others follow as fallbacks when their keys
     are set. Unset: Gemini, OpenAI, Groq, then xAI (Grok), whichever have real keys."""
     first = os.getenv("VISION_PROVIDER", "").strip().lower()
     order = [first] + [p for p in VISION_KEYS if p != first] if first in VISION_KEYS else list(VISION_KEYS)
-    return [p for i, p in enumerate(order) if (i == 0 and first in VISION_KEYS) or _real_key(VISION_KEYS[p])]
+    return [p for i, p in enumerate(order) if (i == 0 and first in VISION_KEYS) or _has_key(p)]
 
 
 def openai_vision_model_id() -> str:

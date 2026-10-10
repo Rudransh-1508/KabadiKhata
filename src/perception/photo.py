@@ -14,6 +14,8 @@ import hashlib
 import json
 import logging
 import os
+import threading
+import time
 from typing import Optional
 
 from agent import stub_tools
@@ -216,9 +218,50 @@ def _ask_openai(raw: bytes) -> str:
 
 
 def _ask_groq(raw: bytes) -> str:
-    """Groq (OpenAI-compatible, api.groq.com): its vision model, with JSON mode."""
-    return _ask_chat_completions(raw, "https://api.groq.com/openai/v1", os.environ["GROQ_API_KEY"],
-                                 config.groq_vision_model_id(), json_mode=True)
+    """Groq (OpenAI-compatible, api.groq.com): its vision model, with JSON mode. Several keys
+    (GROQ_API_KEYS) are used on a rolling basis: stay on the current key until Groq says it is
+    exhausted (429) or rejects it (401/403), then move on; a spent key cools down before reuse."""
+    import httpx
+
+    keys = config.groq_api_keys()
+    if not keys:
+        raise KeyError("GROQ_API_KEY")
+    with _groq_lock:
+        start = _groq_state["current"] % len(keys)
+    order = [keys[(start + i) % len(keys)] for i in range(len(keys))]
+    now = time.monotonic()
+    ready = [k for k in order if _groq_cooldown.get(k, 0) <= now] or order[:1]  # all cooling: try the current one
+    last: Exception = RuntimeError("no Groq key tried")
+    for key in ready:
+        try:
+            answer = _ask_chat_completions(raw, "https://api.groq.com/openai/v1", key,
+                                           config.groq_vision_model_id(), json_mode=True)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in (401, 403, 429):
+                raise
+            wait = _retry_after_s(exc.response)
+            _groq_cooldown[key] = time.monotonic() + wait
+            log.warning("Groq key #%d %s; resting it %.0fs, trying the next",
+                        keys.index(key) + 1, exc.response.status_code, wait)
+            last = exc
+            continue
+        with _groq_lock:
+            _groq_state["current"] = keys.index(key)  # sticky: keep using the key that works
+        return answer
+    raise last
+
+
+_groq_lock = threading.Lock()
+_groq_state = {"current": 0}
+_groq_cooldown: dict[str, float] = {}
+
+
+def _retry_after_s(resp) -> float:
+    """Seconds Groq asks us to wait (retry-after header), else 60."""
+    try:
+        return max(1.0, min(float(resp.headers.get("retry-after", "60")), 3600.0))
+    except ValueError:
+        return 60.0
 
 
 def _ask_xai(raw: bytes) -> str:

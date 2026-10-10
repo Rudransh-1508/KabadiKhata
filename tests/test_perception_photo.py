@@ -19,7 +19,10 @@ def isolated_cache(tmp_path, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("XAI_API_KEY", raising=False)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEYS", raising=False)
     monkeypatch.delenv("VISION_PROVIDER", raising=False)
+    photo._groq_state["current"] = 0
+    photo._groq_cooldown.clear()
     photo._gemini_client.cache_clear()
     yield
     photo._gemini_client.cache_clear()
@@ -317,3 +320,67 @@ def test_groq_request_shape(monkeypatch):
     assert seen["json"]["response_format"] == {"type": "json_object"}
     from common import config
     assert config.vision_providers() == ["gemini", "groq"]
+
+
+
+# ---------- rolling Groq keys ----------
+
+def _groq_server(monkeypatch, exhausted: set):
+    """A fake Groq: keys in `exhausted` get 429 (retry-after 30), the rest answer."""
+    import httpx
+    used = []
+
+    def fake_post(url, **kw):
+        key = kw["headers"]["Authorization"].removeprefix("Bearer ")
+        used.append(key)
+        req = httpx.Request("POST", url)
+        if key in exhausted:
+            return httpx.Response(429, headers={"retry-after": "30"}, json={"error": "rate"}, request=req)
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=7)}}]}, request=req)
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    return used
+
+
+def test_keys_come_from_the_list_and_the_single_setting(monkeypatch):
+    from common import config
+    monkeypatch.setenv("GROQ_API_KEYS", " k1, k2 ,your-groq-key,,k1")
+    monkeypatch.setenv("GROQ_API_KEY", "k3")
+    assert config.groq_api_keys() == ["k1", "k2", "k3"]
+    assert "groq" in config.vision_providers()
+
+
+def test_an_exhausted_key_hands_over_and_the_next_one_sticks(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEYS", "k1,k2,k3")
+    exhausted = {"k1"}
+    used = _groq_server(monkeypatch, exhausted)
+    assert parse_answer(photo._ask_groq(b"\xff\xd8 a")).kg == 7.0
+    assert used == ["k1", "k2"]
+    used.clear()
+    exhausted.clear()                                    # k1 is fine again, but we stay on k2
+    photo._ask_groq(b"\xff\xd8 b")
+    assert used == ["k2"]
+
+
+def test_a_resting_key_is_skipped_until_its_cooldown_ends(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEYS", "k1,k2")
+    exhausted = {"k2"}
+    used = _groq_server(monkeypatch, exhausted)
+    photo._groq_state["current"] = 1                    # currently on k2, which is spent
+    photo._ask_groq(b"\xff\xd8 c")
+    assert used == ["k2", "k1"]
+    used.clear()
+    exhausted.add("k1")                                 # k1 runs out too: k2 is still resting, so it isn't retried
+    import httpx
+    with pytest.raises(httpx.HTTPStatusError):
+        photo._ask_groq(b"\xff\xd8 d")
+    assert used == ["k1"]
+
+
+def test_all_keys_spent_falls_through_to_the_next_provider(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("VISION_PROVIDER", "groq")
+    monkeypatch.setenv("GROQ_API_KEYS", "k1,k2")
+    _groq_server(monkeypatch, {"k1", "k2"})
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: answer(reading=8))
+    assert photo.read_photo(b64(b"\xff\xd8 all spent")).kg == 8.0
