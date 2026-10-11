@@ -93,14 +93,18 @@ def parse_kg(buf: str) -> float | None:
     return v if 0 < v <= 500 else None
 
 
-def build_payload(user_id, locality, material, kg, simulate, photo_b64=None) -> dict:
-    return {
+def build_payload(user_id, locality, material, kg, simulate, photo_b64=None, audio_b64=None) -> dict:
+    payload = {
         "collector_id": "kab_" + str(user_id),
         "locality": locality,
-        "taps": {"material": material, "kg": float(kg)},
+        # A voice note replaces the taps: material/kg are None, the agent transcribes.
+        "taps": {"material": material, "kg": float(kg)} if material is not None and kg is not None else None,
         "photo_b64": photo_b64,
         "simulate": "mismatch" if simulate else None,
     }
+    if audio_b64:
+        payload["audio_b64"] = audio_b64
+    return payload
 
 
 def resize_for_upload(raw: bytes, max_side: int = 1024) -> bytes:
@@ -309,13 +313,35 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @safe
 async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.effective_message
-    await msg.reply_text(t("voice_soon"))
-    state = context.user_data.get("state")
-    if state == "choosing_material":
-        await msg.reply_text(t("choose_material"), reply_markup=material_keyboard())
-    elif state == "entering_kg":
-        await msg.reply_text(t("enter_weight"), reply_markup=kg_keyboard())
+    """A Hindi voice note replaces the taps: after a photo, the kabadiwala can just
+    say "baarah kilo plastic". We send the note as ``audio_b64`` (OGG as-is — the
+    backend transcribes it) with no taps; the agent reads the photo and the voice
+    and checks they agree (receipt, or one Hindi question)."""
+    ud, msg = context.user_data, update.effective_message
+    if not _registered(ud):
+        await msg.reply_text(t("need_start"))
+        return
+    photo_b64 = (ud.get("pending") or {}).get("photo_b64")
+    if not photo_b64:
+        # Voice replaces taps, but only after a scale photo (the demo spine).
+        await msg.reply_text(t("send_photo"))
+        return
+    try:
+        f = await msg.voice.get_file()
+        raw = bytes(await f.download_as_bytearray())
+        audio_b64 = base64.b64encode(raw).decode("ascii")
+    except Exception:
+        log.warning("voice download failed; asking to retry", exc_info=True)
+        await msg.reply_text(t("error_generic"))
+        return
+    simulate = ud.get("simulate_mismatch", False)
+    if simulate:
+        ud["simulate_mismatch"] = False  # fire once
+    payload = build_payload(
+        update.effective_user.id, ud["locality"], None, None, simulate,
+        demo_fixture_photo() if simulate else photo_b64, audio_b64=audio_b64,
+    )
+    await _run_collection(update, ud, payload)
 
 
 # --------------------------------------------------------------------------
@@ -404,18 +430,10 @@ async def keypad_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise
 
 
-async def _do_collect(update: Update, ud: dict, kg: float) -> None:
+async def _run_collection(update: Update, ud: dict, payload: dict) -> None:
+    """Send a built collection payload and handle the result (receipt / question /
+    error). Shared by the tap path (``_do_collect``) and the voice path."""
     msg = update.effective_message
-    pending = ud["pending"]
-    simulate = ud.get("simulate_mismatch", False)
-    if simulate:
-        ud["simulate_mismatch"] = False  # fire once
-    # In demo mode, send the fixture photo so the backend "reads" 12 kg and the
-    # real consistency rule refuses against the actual tapped weight.
-    photo_b64 = demo_fixture_photo() if simulate else pending.get("photo_b64")
-    payload = build_payload(
-        update.effective_user.id, ud["locality"], pending["material"], kg, simulate, photo_b64,
-    )
     await msg.reply_text(t("processing"))
     try:
         resp = await asyncio.to_thread(api.collect, payload)
@@ -437,6 +455,20 @@ async def _do_collect(update: Update, ud: dict, kg: float) -> None:
         _reset_pending(ud)
         _set_state(ud, "ready")
         await msg.reply_text(t("error_generic"))
+
+
+async def _do_collect(update: Update, ud: dict, kg: float) -> None:
+    pending = ud["pending"]
+    simulate = ud.get("simulate_mismatch", False)
+    if simulate:
+        ud["simulate_mismatch"] = False  # fire once
+    # In demo mode, send the fixture photo so the backend "reads" 12 kg and the
+    # real consistency rule refuses against the actual tapped weight.
+    photo_b64 = demo_fixture_photo() if simulate else pending.get("photo_b64")
+    payload = build_payload(
+        update.effective_user.id, ud["locality"], pending["material"], kg, simulate, photo_b64,
+    )
+    await _run_collection(update, ud, payload)
 
 
 @safe
