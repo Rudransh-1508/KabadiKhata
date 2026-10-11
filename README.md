@@ -10,7 +10,7 @@
 <a href="pyproject.toml"><img src="docs/badges/python.svg" alt="Python 3.12"></a>
 <a href="#built-on-aws-open-source"><img src="docs/badges/aws.svg" alt="AWS: Strands, Cedar, SAM"></a>
 
-[Overview](#overview) • [Features](#features) • [How it works](#how-it-works) • [Getting started](#getting-started) • [Evaluation](#evaluation) • [Limitations](#honesty-and-limitations) • [Credits](#credits-and-licences)
+[Overview](#overview) • [Features](#features) • [How it works](#how-it-works) • [Getting started](#getting-started) • [Evaluation](#evaluation) • [Credits](#credits-and-licences)
 
 <img src="docs/screenshots/landing.jpg" alt="Kabadi Khata landing page: 1,170 verified receipts, 21 kabadiwalas, 5 fraud flags, all synthetic demo data" width="900">
 
@@ -356,13 +356,6 @@ Everything below is measured on **synthetic** data and says so. Scripts and full
 > [!NOTE]
 > This is why the photo reading is never trusted alone. The agent writes a receipt only when the scale reading and the kabadiwala's stated weight (taps or voice) agree within 10%; otherwise it asks one question in Hindi and writes nothing. A misread photo costs a question, not a false receipt.
 
-## Honesty and limitations
-
-- All seeded data is labelled **synthetic**; prices in `data/ratecard.json` are **indicative** and are not the pitch.
-- The radar only sees supply that flows **through the system**. That limit is surfaced as each certificate's **verified-backed %**, not hidden.
-- A photo can be staged. Mitigations: perceptual-hash duplicate detection, mass balance, and auditor-approved physical inspection.
-- The **38×** case is our simulation. The 6-lakh figure is the 2024 NGT/CPCB notice only.
-
 ## Repository layout
 
 ```
@@ -377,14 +370,6 @@ tests/     pytest suite (make test)
 ```
 
 Contributor rules: [`CLAUDE.md`](CLAUDE.md). Vocabulary used in code, UI and the video: [`CONTEXT.md`](CONTEXT.md). Background research: [`research/00_SHORTLIST.md`](research/00_SHORTLIST.md) and `research/01` to `04`.
-
-## Team
-
-**Vanshika** (P1, ML/Perception) · **Aarushi** (P2, Agent & Policy) · **Rudransh** (P3, Backend & Data) · **Sparsh** (P4, Product/UX & Story)
-
-## AI tools used
-
-- **Claude Code** (Anthropic): the only AI coding tool used, for research synthesis, planning, and writing and reviewing the code (bot, console, data, docs, and the backend, agent and policy).
 
 ## Credits and licences
 
