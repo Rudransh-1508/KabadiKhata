@@ -22,7 +22,7 @@ def isolated_cache(tmp_path, monkeypatch):
 
 def answer(**kw) -> str:
     base = {"scale_type": "hanging_dial", "reading": 12, "unit": "kg", "material": "PET",
-            "confidence": 0.9, "notes": ""}
+            "confidence": 0.9, "notes": "", "dial_numbers": [0, 10, 20, 30, 40], "other_column": None}
     return json.dumps({**base, **kw})
 
 
@@ -177,3 +177,29 @@ def test_client_is_reused(monkeypatch):
     photo._ask_gemini(b"\xff\xd8 one")
     photo._ask_gemini(b"\xff\xd8 two")
     assert len(made) == 1
+
+
+@pytest.mark.parametrize("numbers, other, ok", [
+    ([0, 10, 20, 30, 40, 50], None, True),
+    ([0, 10, 20, 30, 40, 50, 60, 70, 90, 100], None, True),   # a gap is still in order
+    ([50, 10, 20, 30, 40], None, True),                       # max printed at the top of a round dial
+    ([0, 5, 10, 15, 5], None, False),                         # repeats
+    ([0, 10, 30, 50, 40, 50], None, False),                   # goes backwards
+    ([0, 10, 15, 20, 30, 50], [0, 13, 15, 20, 40, 50], False),  # the two columns disagree
+    ([0, 10, 20, 30, 40, 50], [0, 10, 20, 30, 40, 50], True),
+    ([0, 10], None, False),                                   # too few to check
+    ("0 10 20", None, False),
+    ([0, "ten", 20], None, False),
+])
+def test_dial_markings_check(numbers, other, ok):
+    assert photo.markings_consistent(numbers, other) is ok
+
+
+def test_a_garbled_dial_gives_no_reading():
+    r = parse_answer(answer(dial_numbers=[0, 10, 20, 20, 30, 40, 50], reading=12, confidence=0.9))
+    assert r.kg is None and r.confidence <= 0.4
+
+
+def test_digital_and_beam_scales_skip_the_dial_check():
+    assert parse_answer(answer(scale_type="digital", dial_numbers=[], reading=7.5)).kg == 7.5
+    assert parse_answer(answer(scale_type="beam_balance", dial_numbers=[], reading=3)).kg == 3.0

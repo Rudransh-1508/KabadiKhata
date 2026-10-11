@@ -1,31 +1,31 @@
 file,set,split,true_material,true_kg,readable,scale_type,notes
-cg_01.png,kaggle_ai,tune,PET,,,tubular_spring,
-cg_02.png,kaggle_ai,tune,PET,,,tubular_spring,
-cg_03.png,kaggle_ai,heldout,PET,,,tubular_spring,
-cg_04.png,kaggle_ai,tune,paper,,,tubular_spring,
-cg_05.png,kaggle_ai,tune,paper,,,tubular_spring,
-cg_06.png,kaggle_ai,heldout,paper,,,tubular_spring,
-cg_07.png,kaggle_ai,tune,cardboard,,,tubular_spring,
-cg_08.png,kaggle_ai,heldout,cardboard,,,tubular_spring,
-cg_09.png,kaggle_ai,tune,metal,,,tubular_spring,
-cg_10.png,kaggle_ai,heldout,metal,,,tubular_spring,
-kw_0.png,kaggle_ai,tune,metal,,,hanging_dial,
-kw_00.png,kaggle_ai,tune,paper,,,hanging_dial,
-kw_1.png,kaggle_ai,tune,PET,,,hanging_dial,
-kw_11.png,kaggle_ai,tune,paper,,,hanging_dial,
-kw_2.png,kaggle_ai,heldout,paper,,,hanging_dial,
-kw_22.png,kaggle_ai,heldout,metal,,,hanging_dial,
-kw_3.png,kaggle_ai,tune,cardboard,,,hanging_dial,
-kw_33.png,kaggle_ai,tune,ewaste,,,hanging_dial,
-kw_4.png,kaggle_ai,tune,metal,,,hanging_dial,
-kw_44.png,kaggle_ai,tune,paper,,,hanging_dial,
-kw_5.png,kaggle_ai,heldout,ewaste,,,hanging_dial,
-kw_55.png,kaggle_ai,tune,metal,,,hanging_dial,
-kw_6.png,kaggle_ai,tune,unknown,,,hanging_dial,glass bottles: no glass label in Material
-kw_66.png,kaggle_ai,tune,unknown,,,hanging_dial,glass bottles: no glass label in Material
-kw_7.png,kaggle_ai,tune,metal,,,hanging_dial,
-kw_77.png,kaggle_ai,heldout,HDPE,,,hanging_dial,
-kw_8.png,kaggle_ai,tune,paper,,,hanging_dial,
-kw_88.png,kaggle_ai,tune,metal,,,hanging_dial,
-kw_9.png,kaggle_ai,heldout,mixed_plastic,,,hanging_dial,
-kw_99.png,kaggle_ai,heldout,metal,,,hanging_dial,
+cg_01.png,kaggle_ai,tune,PET,,no,tubular_spring,"draft (Claude): left column 0,10,15,20,30,50 and right 0,13,15,20,40,50 disagree"
+cg_02.png,kaggle_ai,tune,PET,,no,tubular_spring,"draft (Claude): ""kg"" tube printed 0-5 with 1 on the left and 2 on the right at the marker"
+cg_03.png,kaggle_ai,heldout,PET,,no,tubular_spring,draft (Claude): left column reads ~9 kg but right column prints 18 at the 10 mark; contradicting scale
+cg_04.png,kaggle_ai,tune,paper,,no,tubular_spring,draft (Claude): marker at 10 on the left column but 15 on the right
+cg_05.png,kaggle_ai,tune,paper,10,yes,tubular_spring,draft (Claude): marker on the 10 mark of a 0-50 kg column; both columns agree
+cg_06.png,kaggle_ai,tune,paper,,no,tubular_spring,draft (Claude): left column reads ~6 kg but right column prints 3 at the 10 mark; contradicting scale
+cg_07.png,kaggle_ai,tune,cardboard,10,yes,tubular_spring,draft (Claude): marker on the 10 mark of a 0-50 kg column; both columns agree
+cg_08.png,kaggle_ai,heldout,cardboard,6,yes,tubular_spring,draft (Claude): marker about 6 kg on a 0-50 kg column; both columns agree
+cg_09.png,kaggle_ai,tune,metal,,no,tubular_spring,"draft (Claude): left column repeats 20; right column 0,3,33,33"
+cg_10.png,kaggle_ai,heldout,metal,9.5,yes,tubular_spring,"draft (Claude): marker just above the 10 mark, about 9.5 kg; both columns agree"
+kw_0.png,kaggle_ai,tune,metal,,no,hanging_dial,"draft (Claude): small dial, numbers garbled"
+kw_00.png,kaggle_ai,tune,paper,20,yes,hanging_dial,draft (Claude): needle on 20 of a 0-100 kg dial; 80 is missing from the dial but the 0-30 side is in order
+kw_1.png,kaggle_ai,heldout,PET,25,yes,hanging_dial,draft (Claude): needle straight down between 20 and 30 on a 0-50 kg dial
+kw_11.png,kaggle_ai,tune,paper,,no,hanging_dial,"draft (Claude): dial prints 5 twice (0, 5, 10, 15, 5)"
+kw_2.png,kaggle_ai,heldout,paper,,no,hanging_dial,"draft (Claude): column numbers garbled, no marker visible"
+kw_22.png,kaggle_ai,heldout,metal,,no,hanging_dial,"draft (Claude): dial numbers out of order (12, 2, 28, 59...)"
+kw_3.png,kaggle_ai,tune,cardboard,,no,hanging_dial,"draft (Claude): dial prints 50 twice (0, 10, 30, 50, 40, 50)"
+kw_33.png,kaggle_ai,tune,ewaste,10,yes,hanging_dial,"draft (Claude): needle on 10 of a 50 kg dial (50 printed at the top, where 0 and 50 meet)"
+kw_4.png,kaggle_ai,tune,metal,,no,hanging_dial,draft (Claude): dial prints 20 twice
+kw_44.png,kaggle_ai,tune,paper,,no,hanging_dial,draft (Claude): dial prints 50 twice (left and bottom)
+kw_5.png,kaggle_ai,tune,ewaste,,no,hanging_dial,draft (Claude): dial cut off at the frame edge and numbers garbled
+kw_55.png,kaggle_ai,tune,metal,,no,hanging_dial,"draft (Claude): dial numbers garbled (13, 18, Z...)"
+kw_6.png,kaggle_ai,tune,unknown,,no,hanging_dial,"draft (Claude): cylinder scale, no readable markings"
+kw_66.png,kaggle_ai,tune,unknown,,no,hanging_dial,draft (Claude): scale too small to read in the photo
+kw_7.png,kaggle_ai,tune,metal,,no,hanging_dial,draft (Claude): dial prints 10 twice and has no 20
+kw_77.png,kaggle_ai,heldout,HDPE,18,yes,hanging_dial,"draft (Claude): needle between 10 and 20, nearer 20, about 18 kg (17-19) on a 0-100 kg dial"
+kw_8.png,kaggle_ai,tune,paper,,no,hanging_dial,draft (Claude): tube scale too thin to read
+kw_88.png,kaggle_ai,heldout,metal,325,yes,hanging_dial,"draft (Claude): needle between 300 and 350 on a 0-500 kg dial, about 325 kg"
+kw_9.png,kaggle_ai,heldout,mixed_plastic,,no,hanging_dial,"draft (Claude): dial numbers garbled (8, 50, 20, 50...)"
+kw_99.png,kaggle_ai,heldout,metal,10,yes,hanging_dial,"draft (Claude): needle on the 10 mark of a 0-50 kg dial; minor numbers garbled, major ones in order"

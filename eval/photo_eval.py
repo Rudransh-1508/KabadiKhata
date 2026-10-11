@@ -31,7 +31,8 @@ LABELS = Path("data/eval_photos/labels.csv")
 SET_DIRS = {"kaggle_ai": Path("data/eval_photos/kabadiwala"), "real": Path("data/eval_photos/real")}
 SET_NAMES = {"kaggle_ai": "AI-generated kabadi scale photos (synthetic; kaggle.com/datasets/oneshikaaa/kabadiwala, Apache-2.0)",
              "real": "Real phone photos taken by the team"}
-KG_TOLERANCE = 0.05
+KG_TOLERANCE = 0.05     # CLAUDE.md #6: the headline number
+TICK_KG = 1.0           # secondary: about one small tick on a 50 kg dial
 PAUSE_S = float(os.getenv("EVAL_PAUSE_S", "6"))  # free tier: about 10 model calls a minute
 
 
@@ -59,7 +60,8 @@ def main() -> int:
         print(f"Label these first (true_kg + readable in {LABELS}): {', '.join(unlabelled)}")
         return 1
 
-    report = [f"# read_photo eval: {split} split", ""]
+    report = [f"# read_photo eval: {split} split", "",
+              f"Model: {photo.config.gemini_model_id()} (prompt {photo.PROMPT_VERSION})", ""]
     for set_id, set_rows in _by_set(rows).items():
         report += _score(set_id, set_rows)
     out = Path(f"eval/RESULTS_photo_{split}.md")
@@ -77,7 +79,7 @@ def _by_set(rows: list[dict]) -> dict[str, list[dict]]:
 
 
 def _score(set_id: str, rows: list[dict]) -> list[str]:
-    lines, kg_ok, kg_n, refuse_ok, refuse_n, mat_ok, errors = [], 0, 0, 0, 0, 0, 0
+    lines, kg_ok, kg_n, refuse_ok, refuse_n, mat_ok, errors, tick_ok = [], 0, 0, 0, 0, 0, 0, 0
     for r in rows:
         raw = as_bot_sends(SET_DIRS[set_id] / r["file"])
         was_cached = _cached(raw)
@@ -93,6 +95,7 @@ def _score(set_id: str, rows: list[dict]) -> list[str]:
         if r["readable"] == "yes":
             true = float(r["true_kg"])
             hit = got.kg is not None and abs(got.kg - true) <= KG_TOLERANCE * true
+            tick_ok += got.kg is not None and abs(got.kg - true) <= max(TICK_KG, KG_TOLERANCE * true)
             kg_n += 1
             kg_ok += hit
             verdict = "ok" if hit else "MISS"
@@ -116,6 +119,7 @@ def _score(set_id: str, rows: list[dict]) -> list[str]:
         "",
         *([f"- Model errors (not scored; run again to retry): {errors}"] if errors else []),
         f"- **kg within ±5%:** {pct(kg_ok, kg_n)} readable photos",
+        f"- kg within ±5% or ±1 kg (about one tick), whichever is wider: {pct(tick_ok, kg_n)}",
         f"- **Refused unreadable photos:** {pct(refuse_ok, refuse_n)}",
         f"- **Material correct:** {pct(mat_ok, scored)}",
         f"- n = {scored} photos scored",
