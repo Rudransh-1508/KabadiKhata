@@ -117,7 +117,7 @@ writes nothing. A misread photo costs a question, not a false Receipt.
 - The **38×** case is our simulation. The 6-lakh figure is the 2024 NGT/CPCB notice only.
 
 ## AI tools used
-- **Claude Code** (Anthropic) — research synthesis, planning, and to write/review parts of the code (bot, console, data, docs, and the backend/agent/policy). _[TODO: team — add any other AI coding tools used.]_
+- **Claude Code** (Anthropic) — the only AI coding tool used: research synthesis, planning, and writing/reviewing the code (bot, console, data, docs, and the backend/agent/policy).
 
 ## Credits & licences
 - Fonts: no third-party fonts are bundled — cards render with the OS system font at runtime (Segoe UI/Arial on Windows, DejaVu on Linux, Pillow's built-in default if none is found).
