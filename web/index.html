@@ -1,0 +1,134 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Kabadi Khata</title>
+<meta name="description" content="Proof-of-collection ledger for kabadiwalas and a fraud radar for EPR recycling certificates.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;600&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Kabadi Khata</a>
+  <span class="spacer"></span>
+  <span class="badge-synth" title="All data on this site is synthetic demo data">Synthetic demo data</span>
+</header>
+
+<main>
+  <section class="hero" aria-label="Kabadi Khata">
+    <canvas id="mosaic" aria-hidden="true"></canvas>
+    <div id="tags" class="tags" aria-hidden="true"></div>
+    <div class="hero-scrim"></div>
+    <div class="hero-copy">
+      <span class="eyebrow">Waste &amp; Energy · proof of collection</span>
+      <h1>Kabadi Khata</h1>
+      <p class="tagline">Every kilo proven. Every fake certificate caught.</p>
+      <div class="stats" id="stats">
+        <div class="stat"><b data-k="receipts">1,168</b><span>verified receipts</span></div>
+        <div class="stat"><b data-k="kabadiwalas">20</b><span>kabadiwalas</span></div>
+        <div class="stat alert"><b data-k="flags">5</b><span>fraud flags</span></div>
+      </div>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="console.html">Open the console <span class="arr">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Scroll story: the stage stays pinned; scrolling drives every scene (story.js). -->
+  <section class="story" id="how" aria-label="Why Kabadi Khata">
+    <div class="stage">
+
+      <!-- 1. scrap flies in -->
+      <div class="layer" id="sc-scrap">
+        <div class="float-field" id="field" aria-hidden="true"></div>
+        <div class="scrap-copy">
+          <span class="eyebrow">Kabad</span>
+          <h2 class="news-h">It starts with what we throw away.</h2>
+          <p>Bottles, newspaper, tin, cardboard. Picked up by hand, weighed on a hand scale, sold by the kilo.</p>
+        </div>
+      </div>
+
+      <!-- 2. a tied bundle of raddi (photo) -->
+      <div class="layer" id="sc-bundle" aria-hidden="true">
+        <div class="raddi" id="raddi">
+          <img src="img/raddi.jpg" alt="">
+          <img src="img/raddi-untied.jpg" alt="" class="untied" id="untied" onerror="this.remove()">
+        </div>
+        <span class="ai-label">AI-generated image</span>
+      </div>
+
+      <!-- 3. clipping one -->
+      <div class="layer clip-layer" id="sc-clip1">
+        <article class="clipping">
+          <span class="topic">Recycling</span>
+          <h2 class="clip-h">6 lakh fake recycling certificates</h2>
+          <p class="clip-p"><mark id="hl1">In 2024, the NGT took up CPCB's finding of 6 lakh fake recycling (EPR) certificates from four plastic recyclers.</mark></p>
+          <p class="clip-src">Source: SCC Online, 31 July 2024 (NGT notice to CPCB and MoEFCC)</p>
+        </article>
+        <div class="dof" aria-hidden="true"></div>
+        <div class="big-red" id="big1">6,00,000</div>
+      </div>
+
+      <!-- 4. clipping two -->
+      <div class="layer clip-layer" id="sc-clip2">
+        <article class="clipping tilt">
+          <span class="topic">The people behind it</span>
+          <h2 class="clip-h">No receipt. No record.</h2>
+          <p class="clip-p">Kabadiwalas <mark id="hl2">deal in cash, with no paper or GST trail</mark>, and experts want them recognised as collection agents.</p>
+          <p class="clip-src">Paraphrased from Mongabay India, May 2026</p>
+        </article>
+        <div class="dof" aria-hidden="true"></div>
+      </div>
+
+      <!-- 5. her -->
+      <div class="layer" id="sc-her">
+        <div class="photo-wrap" id="photo"><img src="img/kabadiwala.jpg" alt="An elderly woman carrying a tied bundle of newspapers on her head (AI-generated image)"></div>
+        <div class="photo-wrap close" id="photo2"><img src="img/kabadiwala-close.jpg" alt="Close-up of her face, eyes full of tears (AI-generated image)"></div>
+        <div class="grain" aria-hidden="true"></div>
+        <div class="her-copy" id="her1">
+          <span class="eyebrow">This is who carries it</span>
+          <h2 class="news-h">Every bundle of raddi passes through hands like hers.</h2>
+        </div>
+        <div class="her-copy end" id="her2">
+          <h2 class="news-h">She is paid by the kilo, in cash. Nothing is written down.</h2>
+          <ul>
+            <li>No receipt, so no proof of what she earns, and no bank can see her work.</li>
+            <li>The 2026 waste rules bar working with collectors who are not registered.</li>
+            <li>Lakhs of kabadiwalas like her keep India's recycling running, and not one kilo of it is on paper.</li>
+          </ul>
+        </div>
+        <span class="ai-label">AI-generated image</span>
+      </div>
+
+      <!-- 6. the answer -->
+      <div class="layer" id="sc-cta">
+        <div class="cta-copy">
+          <span class="eyebrow">Kabadi Khata</span>
+          <h2 class="news-h big">We put every kilo on paper.</h2>
+          <p>A receipt for her, a fraud radar for the auditor, and proof a brand can check.</p>
+          <div class="hero-actions"><a class="btn btn-primary btn-lg" href="console.html">Open the console <span class="arr">→</span></a></div>
+        </div>
+      </div>
+
+      <ol class="story-dots" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li><li></li></ol>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Built for Environmental Hacks (WeMakeDevs × AWS) with Strands Agents, Cedar and SAM. All figures are synthetic demo data.</div>
+</footer>
+
+<script src="mosaic.js"></script>
+<script src="story.js"></script>
+<script>
+// Live numbers from the API when served by web/server.py. The figures above are the seeded world's, shown only without an API (static preview).
+(async function () {
+  const get = (p, who) => fetch("/api" + p, { headers: { "X-Principal": who } }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+  try {
+    const [flags, kws] = await Promise.all([get("/flags", "au-1"), get("/actors?role=kabadiwala", "au-1")]);
+    const chains = await Promise.all(kws.map((k) => get("/receipts?collector_id=" + encodeURIComponent(k.actor_id), "au-1")));
+    const n = chains.reduce((s, c) => s + c.receipts.length, 0);
+    const set = (k, v) => { const el = document.querySelector(`[data-k="${k}"]`); if (el) el.textContent = v.toLocaleString("en-IN"); };
+    set("receipts", n); set("kabadiwalas", kws.length); set("flags", flags.length);   // 0 is a real answer too
+  } catch (e) { /* static preview: keep the seeded figures */ }
+})();
+</script>
