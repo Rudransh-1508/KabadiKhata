@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from _env import load_env  # noqa: E402
+from _voice_uploads import import_uploads  # noqa: E402
 
 load_env()
 from perception import voice  # noqa: E402
@@ -34,7 +35,9 @@ SET_NAMES = {"tts": "Synthetic clips (Gemini text-to-speech, 6 voices)",
              "say": "Synthetic clips (macOS Hindi voice \"Lekha\")",
              "sarvam": "Synthetic clips (Sarvam Bulbul text-to-speech, 6 voices)",
              "real": "Real voice notes recorded by the team",
-             "clone": "Synthetic clips (Sarvam voice clone of a team member's real voice notes)"}
+             "clone": "Synthetic clips (Sarvam voice clone of a team member's real voice notes). Clean audio from "
+                      "the same vendor as the Sarvam transcriber: an easier test than real phone audio, so "
+                      "never add it to the `real` count"}
 
 
 def _num(s: str):
@@ -42,6 +45,7 @@ def _num(s: str):
 
 
 def main() -> int:
+    import_uploads()
     rows = [r for r in csv.DictReader(LABELS.open(encoding="utf-8")) if (SET_DIRS[r["set"]] / r["file"]).exists()]
     if not rows:
         print("No clips yet: run eval/gen_voice_clips.py (--engine say works offline) or record some.")

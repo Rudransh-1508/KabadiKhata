@@ -14,6 +14,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from _voice_uploads import import_uploads
+
 LABELS = Path("data/eval_voice/labels.csv")
 OUT = Path("data/eval_voice/real")
 # A spread of numbers (fractions, tens, 40), materials and the injection line
@@ -31,6 +33,7 @@ def main() -> int:
     fields = list(rows[0].keys())
     by_file = {r["file"]: r for r in rows}
     OUT.mkdir(parents=True, exist_ok=True)
+    import_uploads()  # lines someone already uploaded are not recorded again
 
     for n, src in enumerate(LINES, 1):
         name = f"real_{n:02d}.wav"
@@ -44,7 +47,8 @@ def main() -> int:
                         str(OUT / name)], check=True)
         print(f"  saved {OUT / name}")
         if name not in by_file:
-            row = {**line, "file": name, "set": "real", "notes": "real recording by the team"}
+            row = {**line, "file": name, "set": "real", "synthetic": "false",
+                   "notes": "real recording by the team"}
             rows.append(row)
             by_file[name] = row
             with LABELS.open("w", newline="", encoding="utf-8") as fh:
