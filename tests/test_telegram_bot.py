@@ -181,3 +181,67 @@ def test_unregistered_callback_routes_to_start():
     asyncio.run(tb.material_cb(update, _ctx(ud)))
     assert ud["state"] == "need_name"
     assert msg.reply_text.await_args_list[0].args[0] == strings_hi.t("need_start")
+
+
+# ---- voice notes (photo, then a voice note replaces the taps) ----
+def _voice_update(ogg=b"OggSfake-voice-bytes"):
+    update = MagicMock()
+    msg = MagicMock()
+    msg.reply_text = AsyncMock()
+    msg.reply_photo = AsyncMock()
+    f = MagicMock()
+    f.download_as_bytearray = AsyncMock(return_value=bytearray(ogg))
+    msg.voice.get_file = AsyncMock(return_value=f)
+    update.effective_message = msg
+    update.effective_user.id = 7
+    return update, msg
+
+
+def test_build_payload_voice_has_audio_no_taps():
+    p = tb.build_payload(42, "seelampur", None, None, False, "photo", audio_b64="AUD")
+    assert p["audio_b64"] == "AUD"
+    assert p.get("taps") is None
+    assert p["photo_b64"] == "photo"
+    # the tap path is unchanged: taps present, no audio_b64 key
+    q = tb.build_payload(42, "seelampur", "PET", 3, False, "photo")
+    assert q["taps"] == {"material": "PET", "kg": 3.0} and "audio_b64" not in q
+
+
+def test_voice_unregistered_asks_start():
+    update, msg = _voice_update()
+    asyncio.run(tb.voice_handler(update, _ctx({})))
+    msg.reply_photo.assert_not_awaited()
+    assert msg.reply_text.await_args.args[0] == strings_hi.t("need_start")
+
+
+def test_voice_without_photo_asks_for_photo():
+    ud = {"name": "Raju", "locality": "seelampur", "state": "ready",
+          "pending": {"material": None, "kg_buf": "", "photo_b64": None}}
+    update, msg = _voice_update()
+    asyncio.run(tb.voice_handler(update, _ctx(ud)))
+    msg.reply_photo.assert_not_awaited()
+    assert msg.reply_text.await_args.args[0] == strings_hi.t("send_photo")
+
+
+def test_voice_with_photo_sends_audio_and_returns_receipt(monkeypatch):
+    captured = {}
+    real = tb.api.collect
+
+    def spy(payload):
+        captured["payload"] = payload
+        return real(payload)
+
+    monkeypatch.setattr(tb.api, "collect", spy)
+    ud = {"name": "Raju", "locality": "seelampur", "state": "choosing_material",
+          "pending": {"material": None, "kg_buf": "", "photo_b64": "PHOTOB64"}}
+    update, msg = _voice_update()
+    asyncio.run(tb.voice_handler(update, _ctx(ud)))
+
+    # the voice note was downloaded, base64'd, and sent as audio_b64 with no taps
+    assert captured["payload"].get("audio_b64")
+    assert captured["payload"].get("taps") is None
+    assert captured["payload"]["photo_b64"] == "PHOTOB64"
+    # a receipt card came back and the flow reset to ready
+    msg.reply_photo.assert_awaited_once()
+    assert msg.reply_photo.await_args.kwargs["photo"].startswith(b"\x89PNG")
+    assert ud["state"] == "ready"
