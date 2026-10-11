@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kabadi Khata architecture</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#ffffff; --bd:#d8dfea; --ink:#141b26; --mut:#5f6b7a;
+    --green:#2c6a35; --greenbg:#eef6ef; --greenbd:#9cc3a4;
+    --amber:#b07d12; --amberbg:#fdf6e9; --amberbd:#e3c488;
+    --red:#b23321; --redbg:#fdf1ef; --redbd:#e0a99f;
+    --blue:#2f6f8f;
+    --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:"Segoe UI",system-ui,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);
+       -webkit-font-smoothing:antialiased;}
+  .wrap{width:1520px;padding:44px 48px 40px;}
+  h1{font-size:28px;font-weight:800;margin:0;letter-spacing:-.01em;}
+  .sub{font-size:14px;color:var(--mut);margin:8px 0 0;}
+  .sec{margin-top:38px;}
+  .seclbl{display:flex;align-items:center;gap:14px;font-size:12px;font-weight:700;
+          letter-spacing:.1em;color:#8a93a3;text-transform:uppercase;margin-bottom:20px;}
+  .seclbl::after{content:"";flex:1;height:1px;background:var(--bd);}
+
+  .flow{display:flex;align-items:stretch;flex-wrap:nowrap;}
+  .flow.sub{max-width:1060px;}
+  .flow + .flow{margin-top:22px;}
+
+  .card{flex:1 1 0;min-width:0;background:var(--card);border:1px solid var(--bd);
+        border-left:4px solid var(--blue);border-radius:12px;padding:14px 16px;
+        display:flex;flex-direction:column;gap:5px;box-shadow:0 1px 2px rgba(20,27,38,.04);}
+  .card.feat{flex:1.7 1 0;}
+  .card.green{border-left-color:var(--green);background:var(--greenbg);border-color:var(--greenbd);}
+  .card.amber{border-left-color:var(--amber);background:var(--amberbg);border-color:var(--amberbd);}
+  .card.red{border-left-color:var(--red);background:var(--redbg);border-color:var(--redbd);}
+  .card .t{font-size:15px;font-weight:700;line-height:1.15;}
+  .card .d{font-size:12.5px;color:var(--mut);line-height:1.35;}
+  .card .tag{font-size:11px;font-weight:700;color:var(--green);margin-top:1px;}
+  .card.amber .tag{color:var(--amber);}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+  .chip{font-family:var(--mono);font-size:10.5px;color:#3f4a5a;background:#eef1f6;
+        border:1px solid #dde3ec;border-radius:999px;padding:2px 8px;}
+  code{font-family:var(--mono);font-size:11.5px;background:#eef1f6;border:1px solid #dde3ec;
+       border-radius:4px;padding:1px 5px;}
+  .split{border-top:1px dashed #cdd5e1;margin-top:8px;padding-top:7px;display:flex;flex-direction:column;gap:5px;}
+  .out{font-size:12px;line-height:1.3;}
+  .out b{font-weight:700;}
+  .ok{color:var(--green);} .no{color:var(--red);}
+
+  .arrow{flex:0 0 76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;}
+  .arrow.wide{flex-basis:92px;}
+  .arrow .al{font-size:10.5px;line-height:1;height:12px;color:var(--mut);white-space:nowrap;}
+  .arrow .al.g{color:var(--green);font-weight:700;}
+  .arrow .al.r{color:var(--red);font-weight:700;}
+  .arrow svg{display:block;}
+  .arrow .ln{stroke:#9aa4b2;stroke-width:2;fill:none;}
+  .arrow.g .ln{stroke:var(--green);} .arrow.r .ln{stroke:var(--red);}
+
+  .note{font-size:12px;color:var(--mut);margin-top:12px;padding-left:4px;}
+  .note b{color:var(--ink);font-weight:600;}
+
+  .legend{margin-top:36px;border-top:1px solid var(--bd);padding-top:16px;
+          display:flex;flex-wrap:wrap;gap:10px 26px;align-items:center;font-size:12px;color:var(--mut);}
+  .sw{display:inline-block;width:26px;height:14px;border-radius:4px;border:1px solid;vertical-align:-2px;margin-right:8px;}
+  .sw.g{background:var(--greenbg);border-color:var(--greenbd);}
+  .sw.a{background:var(--amberbg);border-color:var(--amberbd);}
+  .sw.r{background:var(--redbg);border-color:var(--redbd);}
+  .foot{margin-top:12px;font-size:11.5px;color:#8a93a3;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Kabadi Khata — architecture</h1>
+  <p class="sub">One write path that can refuse itself · one read path gated by policy · the SQLite ledger is the only authority. Build It (local), all data synthetic.</p>
+
+  <!-- ============ WRITE PATH ============ -->
+  <div class="sec">
+    <div class="seclbl">The write path — a receipt, or a refusal</div>
+    <div class="flow">
+
+      <div class="card">
+        <div class="t">Kabadiwala</div>
+        <div class="d">Sends a scale photo + a Hindi voice note (or taps) on Telegram.</div>
+      </div>
+
+      <div class="arrow"><span class="al">&nbsp;</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+
+      <div class="card">
+        <div class="t">Bot <span style="font-weight:400;color:var(--mut);font-size:12px">(laptop)</span></div>
+        <div class="d">Converts OGG/Opus voice, resizes the photo.</div>
+        <div class="chips"><span class="chip">ffmpeg</span><span class="chip">≤1024px</span></div>
+      </div>
+
+      <div class="arrow"><span class="al">POST</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+
+      <div class="card">
+        <div class="t">FastAPI</div>
+        <div class="d"><code>POST /collections</code></div>
+        <div class="d" style="font-style:italic">the same handler also runs as a Lambda:</div>
+        <div class="chips"><span class="chip">sam local invoke</span></div>
+      </div>
+
+      <div class="arrow"><span class="al">&nbsp;</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+
+      <div class="card feat">
+        <div class="t">Strands agent</div>
+        <div class="d">Reads the photo and the voice note and checks they agree.</div>
+        <div class="chips"><span class="chip">Gemini · photo</span><span class="chip">Sarvam · voice</span></div>
+        <div class="split">
+          <div class="out ok">✓ agree &rarr; <b>create_receipt</b> — its one and only write tool</div>
+          <div class="out no">✗ disagree &rarr; <b>refuse</b>: ask one Hindi question, write nothing</div>
+        </div>
+      </div>
+
+      <div class="arrow g"><span class="al g">on&nbsp;✓</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+
+      <div class="card amber">
+        <div class="t">Cedar gate</div>
+        <div class="d">May this agent <code>create_receipt</code>?</div>
+        <div class="tag">default deny</div>
+      </div>
+
+      <div class="arrow g"><span class="al g">allow</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+
+      <div class="card green">
+        <div class="t">SQLite ledger</div>
+        <div class="d">Hash-chained receipt, <code>prev_hash → hash</code>.</div>
+        <div class="tag">the only authority</div>
+      </div>
+
+    </div>
+    <p class="note">On a pass, the <b>receipt card</b> and the <b>मेरा हिसाब</b> income card go back to the kabadiwala in Telegram. On a mismatch, nothing is written at all.</p>
+  </div>
+
+  <!-- ============ READ / AUDIT PATH ============ -->
+  <div class="sec">
+    <div class="seclbl">The read / audit path — code decides, the human approves, the LLM explains</div>
+
+    <div class="flow sub">
+      <div class="card green">
+        <div class="t">SQLite ledger</div>
+        <div class="d">receipts · certificates · actors · flags</div>
+        <div class="tag">source of truth</div>
+      </div>
+      <div class="arrow"><span class="al">reads</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+      <div class="card feat">
+        <div class="t">Fraud radar</div>
+        <div class="d">Deterministic rules: R1 mass balance · R2 chain · R3 duplicate photo (pHash).</div>
+        <div class="chips"><span class="chip">LLM writes the reason · EN / हिंदी</span></div>
+        <div class="tag" style="color:var(--ink)">the verdict is code, not the LLM</div>
+      </div>
+      <div class="arrow g wide"><span class="al g">flag + reason</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+      <div class="card">
+        <div class="t">Auditor console</div>
+        <div class="d">Reads the flag and the explanation.</div>
+        <div class="tag" style="color:var(--ink)">approves the inspection</div>
+      </div>
+    </div>
+
+    <div class="flow sub">
+      <div class="card">
+        <div class="t">Brand console</div>
+        <div class="d">Verified-backed % per certificate (trust ≥ 80%). Asks: who collected this?</div>
+      </div>
+      <div class="arrow"><span class="al">asks</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+      <div class="card amber">
+        <div class="t">Cedar gate</div>
+        <div class="d">Brand &rarr; kabadiwala identities?</div>
+        <div class="tag">default deny</div>
+      </div>
+      <div class="arrow r"><span class="al r">deny</span>
+        <svg width="40" height="14"><path class="ln" d="M2,7 H30"/><path class="ln" d="M24,2 L31,7 L24,12"/></svg>
+      </div>
+      <div class="card red">
+        <div class="t" style="color:var(--red)">403 — denied by Cedar</div>
+        <div class="d">No names. Provenance in aggregate only; the verified-backed % is still shown.</div>
+      </div>
+    </div>
+
+    <p class="note"><b>OpenSearch</b> mirrors the ledger as a read-only search copy (reindexed from SQLite) — never an authority.</p>
+  </div>
+
+  <!-- ============ LEGEND ============ -->
+  <div class="legend">
+    <span><span class="sw g"></span>AWS open-source tool (Strands · Cedar · SAM · OpenSearch) / the ledger</span>
+    <span><span class="sw a"></span>Cedar policy gate — holds even if the agent code changes</span>
+    <span><span class="sw r"></span>a refusal / denial — the system says no and writes nothing</span>
+  </div>
+</div>
+</body>
+</html>
