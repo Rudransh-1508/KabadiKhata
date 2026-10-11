@@ -118,7 +118,7 @@
     copy.style.transform = "translateY(-50%)";
   }
 
-  // ---------- 2. bundle of raddi (photo); if img/raddi-untied.jpg exists the rope comes off ----------
+  // ---------- 2. bundle of raddi (photo); an <img id="untied"> over it (none yet) fades in as the rope comes off ----------
   const HEADLINE = { x: 0.395, y: 0.29 };
   function bundle(t) {
     const wrap = $("raddi"), W = wrap.offsetWidth, H = wrap.offsetHeight;

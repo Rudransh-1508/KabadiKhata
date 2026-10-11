@@ -38,10 +38,10 @@
 .head-row > div { flex: 1 1 420px; min-width: 0; }
 
 /* buttons on paper */
-.sheet .btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.sheet .btn-primary:hover { background: transparent; color: var(--ink); }
-.sheet .btn-ghost { color: var(--ink); border-color: var(--ink); }
-.sheet .btn-ghost:hover { background: var(--ink); color: var(--paper); }
+.sheet .btn-primary, .panel .btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.sheet .btn-primary:hover, .panel .btn-primary:hover { background: transparent; color: var(--ink); }
+.sheet .btn-ghost, .panel .btn-ghost { color: var(--ink); border-color: var(--ink); }
+.sheet .btn-ghost:hover, .panel .btn-ghost:hover { background: var(--ink); color: var(--paper); }
 .btn[disabled] { opacity: .55; cursor: progress; }
 .link { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
 .link.big { font-size: 19px; text-decoration-thickness: 2px; text-underline-offset: 5px; margin-top: 6px; }
@@ -139,7 +139,7 @@
 .desk-note { font-size: 14px; color: var(--muted); font-style: italic; }
 .chain-scroll { overflow-x: auto; padding: 26px 6px 34px; scrollbar-color: var(--line) transparent; }
 .chain { display: flex; gap: 30px; width: max-content; position: relative; }
-.slip { position: relative; width: 132px; padding: 16px 12px 14px; background-color: #ece9e1; color: var(--ink); background-image: var(--noise);
+.slip { position: relative; width: 132px; padding: 16px 12px 42px;  /* bottom: room for the OK / Edited stamp */ background-color: #ece9e1; color: var(--ink); background-image: var(--noise);
   display: grid; gap: 3px; text-align: left; font: inherit; border: 0; cursor: pointer; box-shadow: 0 10px 22px rgba(0,0,0,.45);
   -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 10px 100%;    /* torn, zig-zag bottom edge */
   transition: transform .2s; }
@@ -151,7 +151,7 @@
 .slip b { font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1.05; }
 .slip .m { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .slip .h { font-family: var(--font-mono); font-size: 10px; color: var(--ink-2); }
-.slip .mark { position: absolute; right: 8px; bottom: 16px; }
+.slip .mark { position: absolute; right: 10px; bottom: 14px; }
 .slip .mark .stamp { font-size: 11px; padding: 4px 6px 3px; }
 .slip.void { opacity: .38; filter: grayscale(1); }
 .slip.sel { outline: 2px solid var(--fg); outline-offset: 3px; }

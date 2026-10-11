@@ -56,13 +56,15 @@ _Stack decision (not a fallback): the demo runs on **FastAPI + SQLite** per [ADR
 Needs [uv](https://docs.astral.sh/uv/), Python 3.12 and `make` (on Windows: Git Bash or WSL). Docker is only for OpenSearch and the SAM step; everything else runs without it.
 ```bash
 make demo        # creates .env (MOCK_LLM=1, no API key needed), installs, starts OpenSearch if Docker is up,
-                 # seeds a synthetic month, then runs the API (:3000), the console (:8501) and the bot
+                 # seeds a synthetic month, then runs the API (:3000), the web front end (:8600),
+                 # the Streamlit console (:8501) and the bot
 make smoke       # in a second terminal: checks every endpoint and the 4 spine beats (14 checks), then re-seeds
 ```
 - **Bot:** put `TELEGRAM_BOT_TOKEN` in `.env` (gitignored). Without it `make demo` runs everything except the bot. Flow: `/start` → photo → tap material + kg **or send a Hindi voice note** → receipt card; `/demo` toggles a simulated mismatch; `/hisaab` returns the income-statement image.
-- **Console:** http://localhost:8501, switch Auditor / Brand in the sidebar.
+- **Web front end (the demo console):** http://localhost:8600: landing page, then Auditor, Kabadiwala ledger and Brand. See [`web/README.md`](web/README.md).
+- **Streamlit console (backup):** http://localhost:8501, switch Auditor / Brand in the sidebar.
 - **Real LLM:** set `MOCK_LLM=0` and `GEMINI_API_KEY` in `.env`. Or run the agent and the radar explainer on Groq too: `LLM_PROVIDER=groq` with `GROQ_API_KEYS=key1,key2,...` (a rate-limited key hands the request to the next one).
-- **One at a time:** `make api`, `make bot`, `make console`, `make up` / `make down` (OpenSearch), `make seed`, `make reindex`.
+- **One at a time:** `make api`, `make bot`, `make web`, `make console`, `make up` / `make down` (OpenSearch), `make seed`, `make reindex`.
 - **Video helpers:** `make tamper COLLECTOR=kw-raju SEQ=0 KG=40` (backup for the live `sqlite3` edit), `make sam-invoke` (the app as an arm64 Lambda: one receipt written, one Cedar denial).
 
 Endpoint and Cedar action reference: [`src/api/README.md`](src/api/README.md).
