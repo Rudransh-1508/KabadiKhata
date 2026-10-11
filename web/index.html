@@ -1,0 +1,114 @@
+<meta charset="utf-8">
+<title>Kabadi Khata</title>
+<meta name="description" content="Proof-of-collection ledger for kabadiwalas and a fraud radar for EPR recycling certificates.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Kabadi Khata</a>
+  <span class="spacer"></span>
+  <span class="badge-synth" title="All data on this site is synthetic demo data">Synthetic demo data</span>
+</header>
+
+<main>
+  <section class="hero" aria-label="Kabadi Khata">
+    <canvas id="mosaic" aria-hidden="true"></canvas>
+    <div id="tags" class="tags" aria-hidden="true"></div>
+    <div class="hero-scrim"></div>
+    <div class="hero-copy">
+      <span class="eyebrow">Waste &amp; Energy · proof of collection</span>
+      <h1>Kabadi Khata</h1>
+      <p class="tagline">Every kilo proven. Every fake certificate caught.</p>
+      <div class="stats" id="stats">
+        <div class="stat"><b data-k="receipts">1,168</b><span>verified receipts</span></div>
+        <div class="stat"><b data-k="kabadiwalas">20</b><span>kabadiwalas</span></div>
+        <div class="stat alert"><b data-k="flags">5</b><span>fraud flags</span></div>
+      </div>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="console.html">Open the console →</a>
+        <a class="btn btn-ghost" href="#how">How it works</a>
+      </div>
+    </div>
+    <span class="hint">move your cursor · every block is a verified receipt (synthetic)</span>
+  </section>
+
+  <!-- Scroll story: the stage stays pinned while you scroll; each scene plays inside it. -->
+  <section class="story" id="how" aria-label="How Kabadi Khata works">
+    <div class="stage">
+      <ol class="story-dots" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
+
+      <div class="scene" data-scene="0">
+        <span class="eyebrow">The problem</span>
+        <div class="mega"><span id="lakh">0</span></div>
+        <p class="scene-sub">fake recycling certificates</p>
+        <p class="scene-note">In 2024, the NGT took up CPCB's finding of 6 lakh fake recycling (EPR) certificates from four plastic recyclers.</p>
+      </div>
+
+      <div class="scene" data-scene="1">
+        <span class="eyebrow">Certificates are paper. Plastic is real.</span>
+        <h2 class="scene-title">Recycler C, September</h2>
+        <div class="bars">
+          <div class="bar-row"><span>Certified</span><div class="bar"><i id="bar-cert"></i></div><b id="num-cert">0 t</b></div>
+          <div class="bar-row"><span>Actually collected</span><div class="bar"><i id="bar-coll" class="ok"></i></div><b id="num-coll">0 t</b></div>
+        </div>
+        <div class="ratio" id="ratio">41× over-claim</div>
+        <p class="scene-note">Simulated case in our synthetic world. The radar flags anything above 1.17×.</p>
+      </div>
+
+      <div class="scene" data-scene="2">
+        <span class="eyebrow">Every kilo gets a receipt</span>
+        <h2 class="scene-title">Chained, so nobody can edit one quietly</h2>
+        <div class="chain-window"><div class="chain-track" id="track"></div></div>
+        <p class="scene-note" id="chain-note">Each receipt carries the fingerprint of the one before it.</p>
+      </div>
+
+      <div class="scene" data-scene="3">
+        <span class="eyebrow">Cedar decides who sees what</span>
+        <h2 class="scene-title">Brands see where the plastic came from. Never who collected it.</h2>
+        <div class="split">
+          <div class="pane">
+            <span class="pane-h ok-h">✓ Allowed</span>
+            <ul class="loc"><li><span>Okhla</span><b>0.38 t</b></li><li><span>Karol Bagh</span><b>0.35 t</b></li><li><span>Seelampur</span><b>0.18 t</b></li></ul>
+          </div>
+          <div class="pane locked">
+            <span class="pane-h bad-h">✕ Denied by Cedar policy</span>
+            <ul class="names"><li>Raju · Seelampur</li><li>Sunita · Okhla</li><li>Imran · Shahdara</li></ul>
+            <div class="lock" id="lock" aria-hidden="true"><svg viewBox="0 0 40 48" width="44" height="52"><path id="shackle" d="M10 22 V14 a10 10 0 0 1 20 0 V22" fill="none" stroke="currentColor" stroke-width="4"/><rect x="5" y="22" width="30" height="22" rx="4" fill="currentColor"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scene" data-scene="4">
+        <span class="eyebrow">Try it</span>
+        <h2 class="scene-title">Run the radar yourself</h2>
+        <div class="roles">
+          <a class="role" href="console.html#auditor"><b>Auditor</b><span>Catch over-claims, approve inspections</span></a>
+          <a class="role" href="console.html#ledger"><b>Kabadiwala ledger</b><span>Verify a receipt chain</span></a>
+          <a class="role" href="console.html#brand"><b>Brand</b><span>Check your certificates</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">Built for Environmental Hacks (WeMakeDevs × AWS) with Strands Agents, Cedar and SAM. All figures are synthetic demo data.</div>
+</footer>
+
+<script src="mosaic.js"></script>
+<script src="story.js"></script>
+<script>
+// Live numbers from the API when served by web/server.py; the static figures above stay if it is unreachable.
+(async function () {
+  const get = (p, who) => fetch("/api" + p, { headers: { "X-Principal": who } }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+  try {
+    const [flags, kws] = await Promise.all([get("/flags", "au-1"), get("/actors?role=kabadiwala", "au-1")]);
+    const chains = await Promise.all(kws.map((k) => get("/receipts?collector_id=" + encodeURIComponent(k.actor_id), "au-1")));
+    const n = chains.reduce((s, c) => s + c.receipts.length, 0);
+    const set = (k, v) => { const el = document.querySelector(`[data-k="${k}"]`); if (el) el.textContent = v.toLocaleString("en-IN"); };
+    set("receipts", n); set("kabadiwalas", kws.length);
+    if (flags.length) set("flags", flags.length);
+  } catch (e) { /* static preview: keep the seeded figures */ }
+})();
+</script>

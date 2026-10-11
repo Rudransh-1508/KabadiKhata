@@ -77,3 +77,8 @@ sam-invoke: lambda-deps
 .PHONY: redteam
 redteam:
 	MOCK_LLM=1 uv run python -m agent.redteam --md docs/redteam_scorecard.md
+
+# New web front end (landing page + console) on http://localhost:8600; needs `make api` running
+.PHONY: web
+web:
+	uv run uvicorn web.server:app --port 8600

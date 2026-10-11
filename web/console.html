@@ -1,0 +1,29 @@
+<meta charset="utf-8">
+<title>Kabadi Khata Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="console.css">
+
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Kabadi Khata</a>
+  <nav class="tabs" aria-label="Console">
+    <a href="#home" data-tab="home">Home</a>
+    <a href="#auditor" data-tab="auditor">Auditor</a>
+    <a href="#ledger" data-tab="ledger">Kabadiwala ledger</a>
+    <a href="#brand" data-tab="brand">Brand</a>
+  </nav>
+  <span class="spacer"></span>
+  <span class="who" id="who"></span>
+  <span class="badge-synth" title="All data on this site is synthetic demo data">Synthetic demo data</span>
+</header>
+
+<main id="view" class="view" tabindex="-1"></main>
+
+<div class="backdrop" id="backdrop" hidden></div>
+<aside class="panel" id="panel" aria-hidden="true" aria-label="Flag detail">
+  <button class="panel-close" id="panel-close" aria-label="Close">✕</button>
+  <div id="panel-body"></div>
+</aside>
+
+<script src="console.js"></script>
