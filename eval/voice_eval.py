@@ -2,7 +2,8 @@
 
     uv run python eval/voice_eval.py
 
-Each set (`tts` = Gemini TTS, `say` = macOS Hindi voice, `real` = recordings by the team) is scored
+Each set (`tts` = Gemini TTS, `say` = macOS Hindi voice, `real` = recordings by the team,
+`clone` = Sarvam voice clone of the `real` speaker) is scored
 apart, over the clips that exist (n is stated per set):
 Stated weight exactly right (the plan's bar: 8 of 10 clips), and material right. Rows with no
 weight or material said expect None. A call that got no answer (quota, network) is a model error
@@ -27,11 +28,13 @@ PAUSE_S = float(os.getenv("EVAL_PAUSE_S", "6"))  # free tier: about 10 model cal
 
 LABELS = Path("data/eval_voice/labels.csv")
 SET_DIRS = {"tts": Path("data/eval_voice/tts"), "say": Path("data/eval_voice/say"),
-            "sarvam": Path("data/eval_voice/sarvam"), "real": Path("data/eval_voice/real")}
+            "sarvam": Path("data/eval_voice/sarvam"), "real": Path("data/eval_voice/real"),
+            "clone": Path("data/eval_voice/clone")}
 SET_NAMES = {"tts": "Synthetic clips (Gemini text-to-speech, 6 voices)",
              "say": "Synthetic clips (macOS Hindi voice \"Lekha\")",
              "sarvam": "Synthetic clips (Sarvam Bulbul text-to-speech, 6 voices)",
-             "real": "Real voice notes recorded by the team"}
+             "real": "Real voice notes recorded by the team",
+             "clone": "Synthetic clips (Sarvam voice clone of a team member's real voice notes)"}
 
 
 def _num(s: str):
