@@ -52,7 +52,7 @@ def main() -> int:
         lines, kg_ok, mat_ok, errors = [], 0, 0, 0
         for r in set_rows:
             raw = (SET_DIRS[set_id] / r["file"]).read_bytes()
-            cached = os.path.exists(voice._cache_path(voice._cache_key(raw)))
+            cached = voice.cache_file(raw) is not None
             got, status = transcribe_with_status(base64.b64encode(raw).decode())
             if not cached:
                 time.sleep(PAUSE_S)

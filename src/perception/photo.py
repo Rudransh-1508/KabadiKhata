@@ -10,10 +10,13 @@ else falls back to the stub reading. Fixture payloads ("fixture:...") always go 
 """
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import logging
 import os
+import threading
+import time
 from typing import Optional
 
 from agent import stub_tools
@@ -85,25 +88,64 @@ def read_photo(photo_b64: str) -> PhotoRead:
     if raw.startswith(b"fixture:"):
         return stub_tools.read_photo(photo_b64)
 
-    key = _cache_key(raw)
-    cached = _cache_get(key)
+    providers = config.vision_providers()
+    cached = _any_cached(raw)  # any provider's earlier answer replays, key or no key (frozen demo inputs)
     if cached is not None:
         return cached
     if config.mock_llm():
         return stub_tools.read_photo(photo_b64)
+    if not providers:
+        log.error("read_photo needs a vision key: one of %s (or GROQ_API_KEYS); VISION_PROVIDER picks the first",
+                  ", ".join(config.VISION_KEYS.values()))
+        return FAILED
 
-    try:
-        answer = _ask_gemini(raw)
-    except KeyError:
-        log.error("read_photo needs GEMINI_API_KEY: photo reading always uses Gemini, whatever LLM_PROVIDER is")
-        return FAILED
-    except Exception as exc:  # fail closed: the agent asks for a clearer photo
-        log.warning("read_photo model call failed: %s", type(exc).__name__)
-        return FAILED
-    result = parse_answer(answer)
-    if result != FAILED:  # a bad reply is asked again next time, never replayed
-        _cache_put(key, answer)
-    return result
+    for provider in providers:  # first that answers wins; a down or rate-limited one falls through
+        try:
+            answer = ASK[provider](raw)
+        except KeyError:
+            log.error("read_photo: no API key for %s", provider)
+            continue
+        except Exception as exc:
+            log.warning("read_photo %s call failed: %s", provider, type(exc).__name__)
+            continue
+        result = parse_answer(answer)
+        if result != FAILED:  # a bad reply is asked again next time, never replayed
+            _cache_put(_cache_key(raw, provider), answer)
+            return result
+    return FAILED  # fail closed: the agent asks for a clearer photo
+
+
+def _replay_order() -> list[str]:
+    """Configured providers first, then every other known one: a stored answer must replay on a
+    machine that doesn't have the key it was made with (the demo laptop, MOCK_LLM=1)."""
+    first = config.vision_providers()
+    return first + [p for p in config.VISION_KEYS if p not in first]
+
+
+def _any_cached(raw: bytes) -> Optional[PhotoRead]:
+    for provider in _replay_order():
+        cached = _cache_get(_cache_key(raw, provider))
+        if cached is not None:
+            return cached
+    return None
+
+
+def cache_file(raw: bytes) -> Optional[str]:
+    """The stored answer replayed for these bytes, if any (the same lookup read_photo uses)."""
+    for provider in _replay_order():
+        path = _cache_path(_cache_key(raw, provider))
+        if _cache_get(_cache_key(raw, provider)) is not None:
+            return path
+    return None
+
+
+def is_cached(raw: bytes) -> bool:
+    """True when a usable stored answer exists for these exact bytes, from any provider."""
+    return _any_cached(raw) is not None
+
+
+def model_tags() -> str:
+    return ", ".join(_model_tag(p) for p in config.vision_providers()) or "none configured"
 
 
 # ---------- checking what the model said ----------
@@ -177,8 +219,8 @@ def _mime(raw: bytes) -> str:
 # ---------- the model call ----------
 
 def _ask_gemini(raw: bytes) -> str:
-    """Photo reading always uses Gemini vision (it needs GEMINI_API_KEY), even when the agent's
-    chat model is OpenAI (LLM_PROVIDER only picks the agent's model)."""
+    """Gemini vision. Which vision providers run is VISION_PROVIDER / the configured keys, never
+    LLM_PROVIDER (that only picks the agent's chat model)."""
     from google.genai import types
 
     client = _gemini_client(os.environ["GEMINI_API_KEY"], int(config.perception_timeout_s() * 1000))
@@ -194,11 +236,120 @@ def _ask_gemini(raw: bytes) -> str:
     return resp.text or ""
 
 
+def _ask_openai(raw: bytes) -> str:
+    """OpenAI vision (chat completions with the image, JSON mode)."""
+    return _ask_chat_completions(raw, "https://api.openai.com/v1", os.environ["OPENAI_API_KEY"],
+                                 config.openai_vision_model_id(), json_mode=True)
+
+
+def _ask_groq(raw: bytes) -> str:
+    """Groq (OpenAI-compatible, api.groq.com): its vision model, with JSON mode. Several keys
+    (GROQ_API_KEYS) are used on a rolling basis: stay on the current key until Groq says it is
+    exhausted (429) or rejects it (401/403), then move on; a spent key cools down before reuse."""
+    import httpx
+
+    keys = config.groq_api_keys()
+    if not keys:
+        raise KeyError("GROQ_API_KEY")
+    with _groq_lock:
+        start = _groq_state["current"] % len(keys)
+    order = [keys[(start + i) % len(keys)] for i in range(len(keys))]
+    now = time.monotonic()
+    ready = [k for k in order if _groq_cooldown.get(k, 0) <= now] or order[:1]  # all cooling: try the current one
+    last: Exception = RuntimeError("no Groq key tried")
+    for key in ready:
+        try:
+            answer = _ask_chat_completions(raw, "https://api.groq.com/openai/v1", key,
+                                           config.groq_vision_model_id(), json_mode=True)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in (401, 403, 429):
+                raise
+            wait = _retry_after_s(exc.response)
+            _groq_cooldown[key] = time.monotonic() + wait
+            log.warning("Groq key #%d %s; resting it %.0fs, trying the next",
+                        keys.index(key) + 1, exc.response.status_code, wait)
+            last = exc
+            continue
+        with _groq_lock:
+            _groq_state["current"] = keys.index(key)  # sticky: keep using the key that works
+        return answer
+    raise last
+
+
+_groq_lock = threading.Lock()
+_groq_state = {"current": 0}
+_groq_cooldown: dict[str, float] = {}
+
+
+def _retry_after_s(resp) -> float:
+    """Seconds Groq asks us to wait (retry-after header), else 60."""
+    try:
+        return max(1.0, min(float(resp.headers.get("retry-after", "60")), 3600.0))
+    except ValueError:
+        return 60.0
+
+
+def _ask_xai(raw: bytes) -> str:
+    """xAI Grok vision: the same OpenAI-compatible API at api.x.ai. Its docs don't promise a JSON
+    mode, so none is requested; parse_answer copes with plain or fenced JSON."""
+    return _ask_chat_completions(raw, "https://api.x.ai/v1", os.environ["XAI_API_KEY"],
+                                 config.xai_vision_model_id(), json_mode=False)
+
+
+def _ask_chat_completions(raw: bytes, base_url: str, api_key: str, model: str, json_mode: bool) -> str:
+    """Same prompt and JSON contract as Gemini, for any OpenAI-compatible chat-completions API."""
+    import base64
+
+    body = {
+        "model": model,
+        "temperature": 0,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": [
+                {"type": "text", "text": USER_PROMPT},
+                {"type": "image_url", "image_url": {
+                    "url": f"data:{_mime(raw)};base64,{base64.b64encode(raw).decode()}"}},
+            ]},
+        ],
+    }
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+    resp = _http_post(f"{base_url}/chat/completions", headers={"Authorization": f"Bearer {api_key}"},
+                      json=body, timeout=config.perception_timeout_s())
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"] or ""
+
+
+@functools.lru_cache(maxsize=1)
+def _http_client():
+    """One pooled HTTP client for the chat-completions providers, so each photo (and each Groq key
+    tried) reuses an open connection instead of a new TLS handshake. Timeouts are per request."""
+    import httpx
+
+    return httpx.Client()
+
+
+def _http_post(url: str, **kw):
+    return _http_client().post(url, **kw)
+
+
+ASK = {"gemini": lambda raw: _ask_gemini(raw), "openai": lambda raw: _ask_openai(raw),
+       "groq": lambda raw: _ask_groq(raw), "xai": lambda raw: _ask_xai(raw)}
+
+
 # ---------- disk cache ----------
 
-def _cache_key(raw: bytes) -> str:
+def _model_tag(provider: str) -> str:
+    model = {"openai": config.openai_vision_model_id, "groq": config.groq_vision_model_id,
+             "xai": config.xai_vision_model_id}.get(
+        provider, config.gemini_model_id)()
+    return f"{provider}:{model}"
+
+
+def _cache_key(raw: bytes, provider: str = "gemini") -> str:
     h = hashlib.sha256(raw)
-    h.update(f"|{PROMPT_VERSION}|{config.gemini_model_id()}".encode())
+    tag = config.gemini_model_id() if provider == "gemini" else _model_tag(provider)  # gemini keys unchanged
+    h.update(f"|{PROMPT_VERSION}|{tag}".encode())
     return h.hexdigest()
 
 
@@ -217,5 +368,4 @@ def _cache_get(key: str) -> Optional[PhotoRead]:
 
 
 def _cache_put(key: str, answer: str) -> None:
-    jsoncache.write_json(_cache_path(key), {"raw_answer": answer, "prompt_version": PROMPT_VERSION,
-                                            "model_id": config.gemini_model_id()})
+    jsoncache.write_json(_cache_path(key), {"raw_answer": answer, "prompt_version": PROMPT_VERSION})

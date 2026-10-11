@@ -76,9 +76,10 @@ def transcribe_with_status(audio_b64: str) -> tuple[Transcript, str]:
         return stub_tools.transcribe(audio_b64), "stub"
 
     key = _cache_key(raw)
-    cached = _cache_get(key)
-    if cached is not None:
-        return cached, "cached"
+    for path in _replay_paths(raw):  # either provider's stored answer replays, key or no key
+        cached = _cache_get_path(path)
+        if cached is not None:
+            return cached, "cached"
     if config.mock_llm():
         return stub_tools.transcribe(audio_b64), "stub"
 
@@ -178,16 +179,28 @@ def _ask_sarvam(raw: bytes) -> str:
     return resp.json().get("transcript") or ""
 
 
-def _model_tag() -> str:
-    if config.voice_provider() == "sarvam":
+def _model_tag(provider: Optional[str] = None) -> str:
+    if (provider or config.voice_provider()) == "sarvam":
         return f"sarvam:{config.sarvam_stt_model_id()}:{KEYTERMS_VERSION}"
     return f"{PROMPT_VERSION}|{config.gemini_model_id()}"
 
 
-def _cache_key(raw: bytes) -> str:
+def _cache_key(raw: bytes, provider: Optional[str] = None) -> str:
     h = hashlib.sha256(raw)
-    h.update(f"|{_model_tag()}".encode())
+    h.update(f"|{_model_tag(provider)}".encode())
     return h.hexdigest()
+
+
+def _replay_paths(raw: bytes) -> list[str]:
+    """The configured provider's cache entry first, then the other's: a frozen voice note must
+    replay on a machine without the key it was transcribed with."""
+    first = config.voice_provider()
+    return [_cache_path(_cache_key(raw, p)) for p in [first] + [q for q in ("sarvam", "gemini") if q != first]]
+
+
+def cache_file(raw: bytes) -> Optional[str]:
+    """The stored answer replayed for these bytes, if any (the same lookup transcribe uses)."""
+    return next((p for p in _replay_paths(raw) if _cache_get_path(p) is not None), None)
 
 
 def _cache_path(key: str) -> str:
@@ -195,8 +208,12 @@ def _cache_path(key: str) -> str:
 
 
 def _cache_get(key: str) -> Optional[Transcript]:
+    return _cache_get_path(_cache_path(key))
+
+
+def _cache_get_path(path: str) -> Optional[Transcript]:
     """Replay the model's stored answer through today's parser, so parser fixes reach cached clips."""
-    entry = jsoncache.read_json(_cache_path(key))
+    entry = jsoncache.read_json(path)
     if not entry or not isinstance(entry.get("raw_answer"), str):
         return None
     answer, model = entry["raw_answer"], str(entry.get("model", ""))

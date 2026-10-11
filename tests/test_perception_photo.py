@@ -15,6 +15,14 @@ def b64(data: bytes) -> str:
 def isolated_cache(tmp_path, monkeypatch):
     monkeypatch.setenv("KK_CACHE_DIR", str(tmp_path))
     monkeypatch.setenv("LLM_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("XAI_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("GROQ_API_KEYS", raising=False)
+    monkeypatch.delenv("VISION_PROVIDER", raising=False)
+    photo._groq_state["current"] = 0
+    photo._groq_cooldown.clear()
     photo._gemini_client.cache_clear()
     yield
     photo._gemini_client.cache_clear()
@@ -203,3 +211,196 @@ def test_a_garbled_dial_gives_no_reading():
 def test_digital_and_beam_scales_skip_the_dial_check():
     assert parse_answer(answer(scale_type="digital", dial_numbers=[], reading=7.5)).kg == 7.5
     assert parse_answer(answer(scale_type="beam_balance", dial_numbers=[], reading=3)).kg == 3.0
+
+
+
+# ---------- OpenAI vision and fallback ----------
+
+def test_openai_reads_the_photo_when_it_is_the_only_key(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.delenv("GEMINI_API_KEY")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: pytest.fail("gemini has no key"))
+    monkeypatch.setattr(photo, "_ask_openai", lambda raw: answer(reading=9))
+    assert photo.read_photo(b64(b"\xff\xd8 openai only")).kg == 9.0
+
+
+def test_falls_back_to_openai_when_gemini_is_down(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+
+    def busy(raw):
+        raise ConnectionError("503")
+
+    monkeypatch.setattr(photo, "_ask_gemini", busy)
+    monkeypatch.setattr(photo, "_ask_openai", lambda raw: answer(reading=11))
+    img = b64(b"\xff\xd8 gemini down")
+    assert photo.read_photo(img).kg == 11.0
+    monkeypatch.setenv("MOCK_LLM", "1")  # the fallback's answer replays offline too
+    assert photo.read_photo(img).kg == 11.0
+
+
+def test_vision_provider_setting_picks_the_first(monkeypatch):
+    from common import config
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    assert config.vision_providers() == ["gemini", "openai"]
+    monkeypatch.setenv("VISION_PROVIDER", "openai")
+    assert config.vision_providers() == ["openai", "gemini"]
+    monkeypatch.delenv("OPENAI_API_KEY")
+    monkeypatch.setenv("GEMINI_API_KEY", "your-gemini-key")
+    assert config.vision_providers() == ["openai"]  # chosen explicitly; placeholder keys don't count
+
+
+def test_openai_request_shape_and_timeout(monkeypatch):
+    import httpx
+    seen = {}
+
+    def fake_post(url, **kw):
+        seen.update(url=url, **kw)
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=5)}}]},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(photo, "_http_post", fake_post)
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    monkeypatch.setenv("PERCEPTION_TIMEOUT_S", "9")
+    assert parse_answer(photo._ask_openai(b"\xff\xd8 jpeg")).kg == 5.0
+    body = seen["json"]
+    assert seen["timeout"] == 9.0 and body["temperature"] == 0
+    assert body["response_format"] == {"type": "json_object"}
+    assert body["messages"][1]["content"][1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+
+
+
+def test_grok_reads_the_photo_and_is_a_fallback(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("XAI_API_KEY", "test-xai-key")
+    from common import config
+    assert config.vision_providers() == ["gemini", "xai"]
+
+    def busy(raw):
+        raise ConnectionError("503")
+
+    monkeypatch.setattr(photo, "_ask_gemini", busy)
+    monkeypatch.setattr(photo, "_ask_xai", lambda raw: "```json\n" + answer(reading=14) + "\n```")
+    assert photo.read_photo(b64(b"\xff\xd8 grok")).kg == 14.0
+    monkeypatch.setenv("VISION_PROVIDER", "xai")
+    assert config.vision_providers()[0] == "xai"
+
+
+def test_grok_request_goes_to_xai_without_json_mode(monkeypatch):
+    import httpx
+    seen = {}
+
+    def fake_post(url, **kw):
+        seen.update(url=url, **kw)
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=3)}}]},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(photo, "_http_post", fake_post)
+    monkeypatch.setenv("XAI_API_KEY", "test-xai-key")
+    assert parse_answer(photo._ask_xai(b"\xff\xd8 jpeg")).kg == 3.0
+    assert seen["url"] == "https://api.x.ai/v1/chat/completions"
+    assert "response_format" not in seen["json"] and seen["json"]["model"] == "grok-4.7"
+
+
+
+def test_groq_request_shape(monkeypatch):
+    import httpx
+    seen = {}
+
+    def fake_post(url, **kw):
+        seen.update(url=url, **kw)
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=6)}}]},
+                              request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(photo, "_http_post", fake_post)
+    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
+    assert parse_answer(photo._ask_groq(b"\xff\xd8 jpeg")).kg == 6.0
+    assert seen["url"] == "https://api.groq.com/openai/v1/chat/completions"
+    assert seen["json"]["response_format"] == {"type": "json_object"}
+    from common import config
+    assert config.vision_providers() == ["gemini", "groq"]
+
+
+
+# ---------- rolling Groq keys ----------
+
+def _groq_server(monkeypatch, exhausted: set):
+    """A fake Groq: keys in `exhausted` get 429 (retry-after 30), the rest answer."""
+    import httpx
+    used = []
+
+    def fake_post(url, **kw):
+        key = kw["headers"]["Authorization"].removeprefix("Bearer ")
+        used.append(key)
+        req = httpx.Request("POST", url)
+        if key in exhausted:
+            return httpx.Response(429, headers={"retry-after": "30"}, json={"error": "rate"}, request=req)
+        return httpx.Response(200, json={"choices": [{"message": {"content": answer(reading=7)}}]}, request=req)
+
+    monkeypatch.setattr(photo, "_http_post", fake_post)
+    return used
+
+
+def test_keys_come_from_the_list_and_the_single_setting(monkeypatch):
+    from common import config
+    monkeypatch.setenv("GROQ_API_KEYS", " k1, k2 ,your-groq-key,,k1")
+    monkeypatch.setenv("GROQ_API_KEY", "k3")
+    assert config.groq_api_keys() == ["k1", "k2", "k3"]
+    assert "groq" in config.vision_providers()
+
+
+def test_an_exhausted_key_hands_over_and_the_next_one_sticks(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEYS", "k1,k2,k3")
+    exhausted = {"k1"}
+    used = _groq_server(monkeypatch, exhausted)
+    assert parse_answer(photo._ask_groq(b"\xff\xd8 a")).kg == 7.0
+    assert used == ["k1", "k2"]
+    used.clear()
+    exhausted.clear()                                    # k1 is fine again, but we stay on k2
+    photo._ask_groq(b"\xff\xd8 b")
+    assert used == ["k2"]
+
+
+def test_a_resting_key_is_skipped_until_its_cooldown_ends(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEYS", "k1,k2")
+    exhausted = {"k2"}
+    used = _groq_server(monkeypatch, exhausted)
+    photo._groq_state["current"] = 1                    # currently on k2, which is spent
+    photo._ask_groq(b"\xff\xd8 c")
+    assert used == ["k2", "k1"]
+    used.clear()
+    exhausted.add("k1")                                 # k1 runs out too: k2 is still resting, so it isn't retried
+    import httpx
+    with pytest.raises(httpx.HTTPStatusError):
+        photo._ask_groq(b"\xff\xd8 d")
+    assert used == ["k1"]
+
+
+def test_all_keys_spent_falls_through_to_the_next_provider(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("VISION_PROVIDER", "groq")
+    monkeypatch.setenv("GROQ_API_KEYS", "k1,k2")
+    _groq_server(monkeypatch, {"k1", "k2"})
+    monkeypatch.setattr(photo, "_ask_gemini", lambda raw: answer(reading=8))
+    assert photo.read_photo(b64(b"\xff\xd8 all spent")).kg == 8.0
+
+
+
+def test_a_frozen_photo_replays_on_a_laptop_without_any_key(monkeypatch):
+    monkeypatch.setenv("MOCK_LLM", "0")
+    monkeypatch.setenv("VISION_PROVIDER", "groq")
+    monkeypatch.setenv("GROQ_API_KEYS", "k1")
+    monkeypatch.setattr(photo, "_ask_groq", lambda raw: answer(reading=17))
+    img = b64(b"\xff\xd8 demo photo")
+    assert photo.read_photo(img).kg == 17.0
+    for k in ("GROQ_API_KEYS", "GEMINI_API_KEY", "VISION_PROVIDER"):  # the demo laptop
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("MOCK_LLM", "1")
+    assert photo.read_photo(img).kg == 17.0
+    assert photo.is_cached(photo._decode(img))
+
+
+
+def test_chat_completion_providers_share_one_http_client():
+    assert photo._http_client() is photo._http_client()
