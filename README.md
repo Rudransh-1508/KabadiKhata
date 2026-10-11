@@ -166,7 +166,7 @@ Everything below is measured on **synthetic** data and says so. Scripts and full
 - **Real voice notes from a team member (WhatsApp): weight and material right on 3 of 3.** n is small, so it is reported as 3/3, not a percentage.
 - The other 5 script lines, spoken in that team member's cloned voice (Sarvam voice cloning; synthetic, and from the same vendor as the transcriber, so an easier test than real phone audio; never counted as real): 5 of 5, including the prompt-injection line, which stays a stated weight to check, not an instruction.
 
-**Photo → scale reading** ([`eval/photo_eval.py`](eval/photo_eval.py), scored once on the held-out split). The team's 30 AI-generated kabadi scale images ([Kaggle](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala)), split 20 for tuning and 10 held out, labelled by a person. Read by Groq `qwen/qwen3.8-27b` (prompt v4); n = 10, 6 with a readable dial:
+**Photo → scale reading** ([`eval/photo_eval.py`](eval/photo_eval.py), [`RESULTS_photo_heldout_groq.md`](eval/RESULTS_photo_heldout_groq.md), scored once on the held-out split). The team's 30 AI-generated kabadi scale images ([Kaggle](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala)), split 20 for tuning and 10 held out, labelled by a person. Read by Groq `qwen/qwen3.8-27b` (prompt v4); n = 10, 6 with a readable dial:
 
 - **kg within ±5%: 2 of 6.** Within ±5% or ±1 kg (about one dial tick): 4 of 6. One large miss (25 kg read as 1.5).
 - **Material right: 9 of 10.**
