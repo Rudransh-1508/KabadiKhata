@@ -28,3 +28,6 @@ data/eval_voice/real/
 data/eval_voice/say/
 data/eval_voice/sarvam/
 data/eval_voice/clone/
+data/eval_lookalike/*
+!data/eval_lookalike/pairs.csv
+!data/eval_lookalike/README.md
