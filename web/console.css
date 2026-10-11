@@ -33,7 +33,7 @@
   border-top: 3px double var(--ink); border-bottom: 1px solid var(--ink); padding: 7px 0; margin-bottom: 26px; }
 .kicker { font-size: 14px; font-style: italic; color: var(--ink-2); margin: 0; }
 .headline { font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 5vw, 64px); line-height: 1; margin: 6px 0 12px; letter-spacing: 0; text-wrap: balance; }
-.dek { font-size: 18px; line-height: 1.5; color: var(--ink-2); margin: 0; max-width: 60ch; }
+.dek { font-size: clamp(18px, 1.6vw, 21px); line-height: 1.5; color: var(--ink-2); margin: 0; max-width: 60ch; }
 .head-row { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 18px 30px; }
 .head-row > div { flex: 1 1 420px; min-width: 0; }
 
@@ -44,6 +44,7 @@
 .sheet .btn-ghost:hover { background: var(--ink); color: var(--paper); }
 .btn[disabled] { opacity: .55; cursor: progress; }
 .link { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+.link.big { font-size: 19px; text-decoration-thickness: 2px; text-underline-offset: 5px; margin-top: 6px; }
 
 /* rubber stamps (real stamps are upper-case and spaced) */
 .stamp { display: inline-block; font: 800 12px/1 var(--font-body); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap;

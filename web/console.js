@@ -89,11 +89,11 @@
         <p class="dek">Pick a desk. Each one sees only what Cedar allows it to see.</p>
         <div class="front" style="margin-top:30px">
           <a href="#auditor"><p class="kicker">Auditor desk · au-1</p><h2>The fraud radar</h2><span class="fig red" id="h-flags">–</span>
-            <p id="h-flags-s">Check every recycler's certificates against verified receipts.</p><span class="link">Open the radar</span></a>
+            <p id="h-flags-s">Check every recycler's certificates against verified receipts.</p><span class="link big">Open the radar →</span></a>
           <a href="#ledger"><p class="kicker">Kabadiwala ledger</p><h2>Receipt chains</h2><span class="fig" id="h-kw">–</span>
-            <p id="h-kw-s">Verify any kabadiwala's chain of receipts.</p><span class="link">Open the ledger</span></a>
+            <p id="h-kw-s">Verify any kabadiwala's chain of receipts.</p><span class="link big">Open the ledger →</span></a>
           <a href="#brand"><p class="kicker">Brand desk · br-1</p><h2>My certificates</h2><span class="fig" id="h-risk">–</span>
-            <p id="h-risk-s">See how much of each certificate real collections back.</p><span class="link">Open certificates</span></a>
+            <p id="h-risk-s">See how much of each certificate real collections back.</p><span class="link big">Open certificates →</span></a>
         </div>
       </section>`));
     try {
@@ -124,7 +124,7 @@
       <section class="sheet rise">
         <div class="head-row"><div><p class="kicker">Auditor desk · au-1</p><h1 class="headline">The fraud radar</h1>
           <p class="dek">Code decides what gets flagged. The language model only explains it. You decide what happens next.</p></div>
-          <button class="btn btn-primary" id="run">Run the radar</button></div>
+          <button class="btn btn-primary btn-lg" id="run">Run the radar</button></div>
         <div class="tally" id="summary"></div>
         <div class="flags" id="flags"><p class="empty">Loading…</p></div>
       </section>`));
@@ -241,7 +241,7 @@
         <span class="fine">by ${esc(f.decided_by || "")}${when ? ", " + esc(when) : ""}</span>`;
       return;
     }
-    box.innerHTML = `<button class="btn btn-primary" data-d="inspect">Request an inspection</button><button class="btn btn-ghost" data-d="dismiss">Dismiss</button>
+    box.innerHTML = `<button class="btn btn-primary btn-lg" data-d="inspect">Request an inspection</button><button class="btn btn-ghost" data-d="dismiss">Dismiss</button>
       <span class="fine">Only a person decides. The rule and the explanation never do.</span>`;
     box.querySelectorAll("button").forEach((b) => b.addEventListener("click", async () => {
       box.querySelectorAll("button").forEach((x) => { x.disabled = true; });
@@ -300,7 +300,7 @@
       </div>`));
     countUp(document.getElementById("i1"), receipts.length); countUp(document.getElementById("i2"), kg, 1); countUp(document.getElementById("i3"), inr);
     box.replaceChildren(h(`<div style="display:grid;gap:8px">
-      <div class="desk-row"><button class="btn btn-primary" id="verify">Verify the chain</button>
+      <div class="desk-row"><button class="btn btn-primary btn-lg" id="verify">Verify the chain</button>
         <span class="desk-note">Recomputes every fingerprint from what the receipt says.</span></div>
       <div class="chain-scroll" id="cscroll"><div class="chain" id="chain"></div></div></div>
       <div id="after"></div>`));
@@ -428,7 +428,7 @@
             || `<p class="fine">No verified receipts behind this certificate.</p>`}</div></div>
         <div class="redacted" style="margin-top:30px" id="redacted"><p class="section-label" style="margin:0">Kabadiwalas behind these tonnes</p>
           <ol>${["9em", "7em", "11em", "8em"].map((w, i) => `<li><span class="bar" style="width:${w}"></span>, ${["Seelampur", "Okhla", "Shahdara", "Narela"][i]}</li>`).join("")}</ol>
-          <div><button class="btn btn-ghost" id="ask">Request their names</button></div>
+          <div><button class="btn btn-primary btn-lg" id="ask">Request their names</button></div>
           <div id="denial"></div></div>
       </section>`));
     countUp(document.getElementById("dpct"), pct, 1, "%");
