@@ -1,6 +1,6 @@
 """How well does the look-alike check separate "same load" from "same shop, different load"?
 
-    uv sync --extra dedupe && uv run --extra dedupe python eval/lookalike_eval.py
+    uv sync --extra dev --extra product --extra dedupe && uv run --extra dedupe python eval/lookalike_eval.py
 
 Groups of photo pairs, scored by cosine similarity (perception/lookalike.py):
   - different load, same shop: every pair of cg_01..cg_10 (one shop, ten loads). Must stay BELOW the line.
@@ -23,6 +23,7 @@ from PIL import Image, ImageEnhance
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from perception import lookalike  # noqa: E402
+from photo_eval import as_bot_sends  # noqa: E402  (<=1024 px JPEG, what the bot sends)
 
 PHOTOS = Path("data/eval_photos/kabadiwala")
 PAIRS = Path("data/eval_lookalike/pairs.csv")
@@ -56,7 +57,7 @@ def spread(xs: list[float]) -> str:
 
 def main() -> int:
     if not lookalike.available():
-        print("Install the optional extra first: uv sync --extra dedupe")
+        print("Install the optional extra first: uv sync --extra dev --extra product --extra dedupe")
         return 1
     files = sorted(PHOTOS.glob("*.png"))
     if not files:
@@ -64,7 +65,11 @@ def main() -> int:
         return 1
     report = ["# Look-alike photo check", "",
               "DINOv2-small image embeddings (ONNX), cosine similarity. Photos: the team's AI-generated "
-              "kabadi set (synthetic). A pair is flagged when its similarity is at or above the threshold.", ""]
+              "kabadi set (synthetic), resized to the <=1024 px JPEG the bot sends. A pair is flagged when its "
+              "similarity is at or above the threshold.", "",
+              "**Not yet evidence of catching re-shoots:** the only positive group is the same image warped "
+              "(augmentation robustness). No threshold is validated until real same-load pairs are listed in "
+              "data/eval_lookalike/pairs.csv.", ""]
     for title, region in (("Load region only (the default)", lookalike.LOAD_REGION), ("Whole photo", None)):
         report += [f"## {title}", ""] + _section(files, region) + [""]
     report += ["Read it as: a usable threshold flags nearly all same-load pairs and almost no "
@@ -77,7 +82,8 @@ def main() -> int:
 
 
 def _section(files: list[Path], region) -> list[str]:
-    emb = {f.stem: lookalike.embed(f.read_bytes(), region) for f in files}
+    sent = {f.stem: as_bot_sends(f) for f in files}
+    emb = {k: lookalike.embed(raw, region) for k, raw in sent.items()}
     sim = lookalike.similarity
     cg = [k for k in emb if k.startswith("cg_")]
     kw = [k for k in emb if k.startswith("kw_")]
@@ -86,13 +92,13 @@ def _section(files: list[Path], region) -> list[str]:
         "different load, same shop": ([sim(emb[a], emb[b]) for a, b in itertools.combinations(cg, 2)], False),
         "different shops": ([sim(emb[a], emb[b]) for a, b in itertools.combinations(kw, 2)], False),
         "same photo, simulated new angle (stand-in)": (
-            [sim(emb[f.stem], lookalike.embed(new_angle(f.read_bytes(), i), region)) for i, f in enumerate(files)],
+            [sim(emb[f.stem], lookalike.embed(new_angle(sent[f.stem], i), region)) for i, f in enumerate(files)],
             True),
     }
     if PAIRS.exists():
         listed = {True: [], False: []}
         for r in csv.DictReader(PAIRS.open(encoding="utf-8")):
-            a, b = (lookalike.embed((PAIR_DIR / r[k]).read_bytes(), region) for k in ("file_a", "file_b"))
+            a, b = (lookalike.embed(as_bot_sends(PAIR_DIR / r[k]), region) for k in ("file_a", "file_b"))
             listed[r["same_load"].strip().lower() == "yes"].append(sim(a, b))
         groups["listed pairs: same load"] = (listed[True], True)
         groups["listed pairs: different load"] = (listed[False], False)
