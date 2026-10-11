@@ -7,7 +7,7 @@ unchanged (method, query, body, `X-Principal`), so every number and every 403 co
 
 ```bash
 make seed && make api     # API on :3000
-make web                  # http://localhost:8600
+make web                  # http://localhost:8600 (or: make web WEB_PORT=8633 if 8600 is taken)
 ```
 
 `KK_API_URL` points the forwarder at another API. The Streamlit console (`make console`) still works.
