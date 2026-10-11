@@ -78,7 +78,7 @@ Rules decide; the LLM only words the result. Flags come from the deterministic r
 
 **Which text is shown** (`explanation_source` on the Flag):
 
-1. `"llm"`: a key is set (`GEMINI_API_KEY` or `OPENAI_API_KEY`, per `LLM_PROVIDER`), `MOCK_LLM` is not 1, the call finishes in time and validation passes.
+1. `"llm"`: a key is set (`GEMINI_API_KEY`, `OPENAI_API_KEY` or `GROQ_API_KEYS`/`GROQ_API_KEY`, per `LLM_PROVIDER`), `MOCK_LLM` is not 1, the call finishes in time and validation passes.
 2. `"template"`: otherwise, when R1 excluded Receipts because a Kabadiwala's Chain is broken. The template then says so, names the Kabadiwalas and tonnes, and tells the Auditor to check the R3 Flag first.
 3. `"rule"`: otherwise, the rule's own text. Without an LLM key this is what the console shows.
 
@@ -115,9 +115,10 @@ make redteam                       # every attack against the real code -> docs/
 | Variable | Meaning |
 |---|---|
 | `MOCK_LLM` | `1` replays with the scripted model and templates (tests, rate-limit emergencies) |
-| `LLM_PROVIDER` | `gemini` (default) or `openai` |
+| `LLM_PROVIDER` | `gemini` (default), `openai` or `groq` (Strands' OpenAI model on Groq, with key fallback in `src/common/groq.py`) |
 | `GEMINI_API_KEY`, `OPENAI_API_KEY` | key for the chosen provider; placeholders only in `.env.example`, never committed |
-| `GEMINI_MODEL_ID`, `OPENAI_MODEL_ID` | model names |
+| `GEMINI_MODEL_ID`, `OPENAI_MODEL_ID`, `GROQ_MODEL_ID` | model names |
+| `GROQ_API_KEYS`, `GROQ_API_KEY` | Groq keys; with several, a rate-limited key hands the request to the next |
 | `AGENT_TIMEOUT_S` | per-call limit for the agent's own model calls (default 6; perception uses `PERCEPTION_TIMEOUT_S`, default 10) |
 | `PERCEPTION_TIMEOUT_S` | per-call limit for `read_photo` and `transcribe` (default 10) |
 | `VOICE_PROVIDER` | `sarvam` or `gemini`; default Sarvam when a real `SARVAM_API_KEY` is set, else Gemini |
