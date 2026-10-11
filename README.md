@@ -9,9 +9,9 @@ Contributor rules: [`CLAUDE.md`](CLAUDE.md). Vocabulary (use these terms in code
 > Source: [NGT notice, CPCB/MoEFCC, July 2024](https://www.scconline.com/blog/post/2024/07/31/ngt-issues-notice-cpcb-moefcc-recovery-of-6-lakh-fake-epr-certificates-from-plastic-recycling-companies/). The **38×** fraud case in this project is **our simulation**, not a CPCB finding.
 
 ## What it does
-A kabadiwala sends a photo of the scale + pile to a chat bot and taps the material and weight (voice later). A **Strands agent** checks the photo and the input agree; if they do, it writes **one hash-chained Receipt** and returns a receipt card; if not, it asks **one question and writes nothing**. An **auditor** runs a deterministic **fraud radar** over recycler data; a **brand** sees each Certificate's **verified-backed %** but, under **Cedar** policy, never the collectors' identities.
+A kabadiwala sends a photo of the scale + pile to a Telegram bot and either taps the material and weight or sends a Hindi voice note. A **Strands agent** checks the photo and the input agree; if they do, it writes **one hash-chained Receipt** and returns a receipt card; if not, it asks **one question and writes nothing**. An **auditor** runs a deterministic **fraud radar** over recycler data; a **brand** sees each Certificate's **verified-backed %** but, under **Cedar** policy, never the collectors' identities.
 
-> Channel: **WhatsApp in production; Telegram for the prototype** (Telegram needs no business approval and runs fully locally for Build It).
+> Channel: **Telegram only** for this prototype and the demo. *WhatsApp in production; Telegram for the prototype* — Telegram needs no business approval and runs fully locally for Build It. WhatsApp is the production direction, not part of this build.
 
 ## Who it's for
 See [`docs/personas.md`](docs/personas.md): **Raju** the kabadiwala, **Priya** the brand EPR officer, and the auditor.
@@ -59,7 +59,7 @@ make demo        # creates .env (MOCK_LLM=1, no API key needed), installs, start
                  # seeds a synthetic month, then runs the API (:3000), the console (:8501) and the bot
 make smoke       # in a second terminal: checks every endpoint and the 4 spine beats (14 checks), then re-seeds
 ```
-- **Bot:** put `TELEGRAM_BOT_TOKEN` in `.env` (gitignored). Without it `make demo` runs everything except the bot. Flow: `/start` → photo → material → kg → receipt card; `/demo` toggles a simulated mismatch; `/hisaab` returns the income-statement image.
+- **Bot:** put `TELEGRAM_BOT_TOKEN` in `.env` (gitignored). Without it `make demo` runs everything except the bot. Flow: `/start` → photo → tap material + kg **or send a Hindi voice note** → receipt card; `/demo` toggles a simulated mismatch; `/hisaab` returns the income-statement image.
 - **Console:** http://localhost:8501, switch Auditor / Brand in the sidebar.
 - **Real LLM:** set `MOCK_LLM=0` and `GEMINI_API_KEY` in `.env`. Or run the agent and the radar explainer on Groq too: `LLM_PROVIDER=groq` with `GROQ_API_KEYS=key1,key2,...` (a rate-limited key hands the request to the next one).
 - **One at a time:** `make api`, `make bot`, `make console`, `make up` / `make down` (OpenSearch), `make seed`, `make reindex`.
@@ -117,17 +117,17 @@ writes nothing. A misread photo costs a question, not a false Receipt.
 - The **38×** case is our simulation. The 6-lakh figure is the 2024 NGT/CPCB notice only.
 
 ## AI tools used
-- **Claude Code** (Anthropic) — research synthesis, planning, and to write/review parts of the code (bot, console, data, docs, and the backend/agent/policy). _[TODO: team — add any other AI coding tools used.]_
+- **Claude Code** (Anthropic) — the only AI coding tool used: research synthesis, planning, and writing/reviewing the code (bot, console, data, docs, and the backend/agent/policy).
 
 ## Credits & licences
-- Fonts: system fonts (Segoe UI/Arial) at runtime; _[TODO: if an OFL font (Noto/DejaVu) is bundled, credit it here]._
+- Fonts: no third-party fonts are bundled — cards render with the OS system font at runtime (Segoe UI/Arial on Windows, DejaVu on Linux, Pillow's built-in default if none is found).
 - Libraries: python-telegram-bot, Pillow, qrcode, pydub, Streamlit, pandas, FastAPI, Uvicorn, Mangum, opensearch-py, httpx, honcho, Strands Agents, OpenAI Python SDK (the client for Groq's OpenAI-compatible API), cedarpy (see each project's licence). OpenSearch runs from the `opensearchproject/opensearch` image (Apache-2.0).
 - **Eval photos:** "kabadiwala" dataset by the team (Apache-2.0), [kaggle.com/datasets/oneshikaaa/kabadiwala](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala). AI-generated images (made with Google's Nano Banana image model), labelled synthetic.
 - **Speech:** [Sarvam AI](https://www.sarvam.ai) Saaras (speech-to-text, used by `transcribe`) and Bulbul (text-to-speech, synthetic eval clips) and voice cloning (synthetic clips in a team member's voice, with their recordings) via their API; the macOS "Lekha" Hindi voice for more synthetic clips.
 - **Vision:** [Groq](https://groq.com) serving `qwen/qwen3.8-27b` reads the scale photo, with Google Gemini (`gemini-flash-latest`, via the `google-genai` SDK) as the fallback; OpenAI and xAI Grok are optional further fallbacks. Gemini is also the fallback transcriber.
 
 ## Team
-P1 ML/Perception · P2 Agent & Policy · P3 Backend & Data · P4 Product/UX & Story. _[TODO: names.]_
+**Vanshika** — P1 ML/Perception · **Aarushi** — P2 Agent & Policy · **Rudransh** — P3 Backend & Data · **Sparsh** — P4 Product/UX & Story.
 
 ## Background research
 See [`research/00_SHORTLIST.md`](research/00_SHORTLIST.md) for the candidate ideas scored against the judging criteria, and `research/01`–`04` for problem statements, past winners, Delhi pain points, and the data/stack reality check.
