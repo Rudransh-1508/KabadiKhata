@@ -1063,7 +1063,7 @@ dependencies = [
     { name = "mangum" },
     { name = "opensearch-py" },
     { name = "pydantic" },
-    { name = "strands-agents", extra = ["gemini"] },
+    { name = "strands-agents", extra = ["gemini", "openai"] },
     { name = "uvicorn" },
 ]
 
@@ -1072,9 +1072,6 @@ dev = [
     { name = "honcho" },
     { name = "httpx" },
     { name = "pytest" },
-]
-openai = [
-    { name = "strands-agents", extra = ["openai"] },
 ]
 product = [
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -1101,12 +1098,11 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "python-telegram-bot", marker = "extra == 'product'", specifier = "==22.8" },
     { name = "qrcode", marker = "extra == 'product'" },
-    { name = "strands-agents", extras = ["gemini"], specifier = ">=1.50" },
-    { name = "strands-agents", extras = ["openai"], marker = "extra == 'openai'", specifier = ">=1.50" },
+    { name = "strands-agents", extras = ["gemini", "openai"], specifier = ">=1.50" },
     { name = "streamlit", marker = "extra == 'product'" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
-provides-extras = ["openai", "dev", "product"]
+provides-extras = ["dev", "product"]
 
 [[package]]
 name = "mangum"

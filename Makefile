@@ -9,7 +9,7 @@ endif
 .PHONY: install test api seed demo tamper sam-invoke up down reindex bot console smoke lambda-deps
 
 install: .env
-	uv sync --extra dev --extra product --extra product
+	uv sync --extra dev --extra product
 
 .env:
 	cp .env.example .env

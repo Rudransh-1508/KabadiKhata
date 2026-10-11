@@ -6,7 +6,7 @@ Cases: pass, mismatch, injection. Perception is the stub (fixtures); only the to
 real. Each case runs once with MOCK_LLM=1 and once against the real provider; the outcomes must agree.
 
 Reads os.environ only and does NOT load .env. Export the key first, e.g. `set -a; . ./.env; set +a`.
-The provider follows LLM_PROVIDER (default gemini): GEMINI_API_KEY or OPENAI_API_KEY.
+The provider follows LLM_PROVIDER (default gemini): GEMINI_API_KEY, OPENAI_API_KEY or GROQ_API_KEYS
 Without a key it prints SKIP and exits 0. Exit codes: 0 agree or skipped, 1 outcome differs or the
 real trace has llm_error, 2 a real run raised. Never prints the key; writes no files.
 """
@@ -21,7 +21,7 @@ from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-KEY_VARS = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY"}
+KEY_VARS = {"gemini": "GEMINI_API_KEY", "openai": "OPENAI_API_KEY", "groq": "GROQ_API_KEYS"}
 
 
 def _b64(s: str) -> str:
@@ -100,7 +100,7 @@ def main(argv: Optional[list] = None) -> int:
         print(f"SKIP: unsupported LLM_PROVIDER {provider}")
         return 0
     if not os.environ.get(key_var):
-        print("SKIP: set GEMINI_API_KEY (or OPENAI_API_KEY) to run against the real provider")
+        print(f"SKIP: set {key_var} to run against the real provider")
         return 0
 
     # The agent logs the provider's exception text on failure; it could echo request details, so
