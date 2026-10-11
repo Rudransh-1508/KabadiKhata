@@ -2,7 +2,7 @@
 <title>Kabadi Khata</title>
 <meta name="description" content="Proof-of-collection ledger for kabadiwalas and a fraud radar for EPR recycling certificates.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap">
 <link rel="stylesheet" href="style.css">
 
 <header class="topbar">
@@ -33,61 +33,82 @@
     <span class="hint">move your cursor · every block is a verified receipt (synthetic)</span>
   </section>
 
-  <!-- Scroll story: the stage stays pinned while you scroll; each scene plays inside it. -->
-  <section class="story" id="how" aria-label="How Kabadi Khata works">
+  <!-- Scroll story: the stage stays pinned; scrolling drives every scene (story.js). -->
+  <section class="story" id="how" aria-label="Why Kabadi Khata">
     <div class="stage">
-      <ol class="story-dots" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li></ol>
 
-      <div class="scene" data-scene="0">
-        <span class="eyebrow">The problem</span>
-        <div class="mega"><span id="lakh">0</span></div>
-        <p class="scene-sub">fake recycling certificates</p>
-        <p class="scene-note">In 2024, the NGT took up CPCB's finding of 6 lakh fake recycling (EPR) certificates from four plastic recyclers.</p>
-      </div>
-
-      <div class="scene" data-scene="1">
-        <span class="eyebrow">Certificates are paper. Plastic is real.</span>
-        <h2 class="scene-title">Recycler C, September</h2>
-        <div class="bars">
-          <div class="bar-row"><span>Certified</span><div class="bar"><i id="bar-cert"></i></div><b id="num-cert">0 t</b></div>
-          <div class="bar-row"><span>Actually collected</span><div class="bar"><i id="bar-coll" class="ok"></i></div><b id="num-coll">0 t</b></div>
-        </div>
-        <div class="ratio" id="ratio">41× over-claim</div>
-        <p class="scene-note">Simulated case in our synthetic world. The radar flags anything above 1.17×.</p>
-      </div>
-
-      <div class="scene" data-scene="2">
-        <span class="eyebrow">Every kilo gets a receipt</span>
-        <h2 class="scene-title">Chained, so nobody can edit one quietly</h2>
-        <div class="chain-window"><div class="chain-track" id="track"></div></div>
-        <p class="scene-note" id="chain-note">Each receipt carries the fingerprint of the one before it.</p>
-      </div>
-
-      <div class="scene" data-scene="3">
-        <span class="eyebrow">Cedar decides who sees what</span>
-        <h2 class="scene-title">Brands see where the plastic came from. Never who collected it.</h2>
-        <div class="split">
-          <div class="pane">
-            <span class="pane-h ok-h">✓ Allowed</span>
-            <ul class="loc"><li><span>Okhla</span><b>0.38 t</b></li><li><span>Karol Bagh</span><b>0.35 t</b></li><li><span>Seelampur</span><b>0.18 t</b></li></ul>
-          </div>
-          <div class="pane locked">
-            <span class="pane-h bad-h">✕ Denied by Cedar policy</span>
-            <ul class="names"><li>Raju · Seelampur</li><li>Sunita · Okhla</li><li>Imran · Shahdara</li></ul>
-            <div class="lock" id="lock" aria-hidden="true"><svg viewBox="0 0 40 48" width="44" height="52"><path id="shackle" d="M10 22 V14 a10 10 0 0 1 20 0 V22" fill="none" stroke="currentColor" stroke-width="4"/><rect x="5" y="22" width="30" height="22" rx="4" fill="currentColor"/></svg></div>
-          </div>
+      <!-- 1. scrap flies in -->
+      <div class="layer" id="sc-scrap">
+        <div class="float-field" id="field" aria-hidden="true"></div>
+        <div class="scrap-copy">
+          <span class="eyebrow">Kabad</span>
+          <h2 class="news-h">It starts with what we throw away.</h2>
+          <p>Bottles, newspaper, tin, cardboard. Picked up by hand, weighed on a hand scale, sold by the kilo.</p>
         </div>
       </div>
 
-      <div class="scene" data-scene="4">
-        <span class="eyebrow">Try it</span>
-        <h2 class="scene-title">Run the radar yourself</h2>
-        <div class="roles">
-          <a class="role" href="console.html#auditor"><b>Auditor</b><span>Catch over-claims, approve inspections</span></a>
-          <a class="role" href="console.html#ledger"><b>Kabadiwala ledger</b><span>Verify a receipt chain</span></a>
-          <a class="role" href="console.html#brand"><b>Brand</b><span>Check your certificates</span></a>
+      <!-- 2. a tied bundle of newspaper; the rope comes off and the sheets fan out -->
+      <div class="layer" id="sc-bundle" aria-hidden="true">
+        <div class="bundle" id="bundle">
+          <div class="sheet"></div><div class="sheet"></div><div class="sheet"></div><div class="sheet"></div>
+          <div class="sheet"></div><div class="sheet"></div><div class="sheet"></div>
+          <div class="sheet top" id="topsheet"><span class="mast">रद्दी</span><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="rope v" id="rope-v"></div><div class="rope h" id="rope-h"></div><div class="knot" id="knot"></div>
         </div>
       </div>
+
+      <!-- 3. clipping one -->
+      <div class="layer clip-layer" id="sc-clip1">
+        <article class="clipping">
+          <span class="topic">Recycling</span>
+          <h2 class="clip-h">6 lakh fake recycling certificates</h2>
+          <p class="clip-p"><mark id="hl1">In 2024, the NGT took up CPCB's finding of 6 lakh fake recycling (EPR) certificates from four plastic recyclers.</mark></p>
+          <p class="clip-src">Source: SCC Online, 31 July 2024 (NGT notice to CPCB and MoEFCC)</p>
+        </article>
+        <div class="big-red" id="big1">6,00,000</div>
+      </div>
+
+      <!-- 4. clipping two -->
+      <div class="layer clip-layer" id="sc-clip2">
+        <article class="clipping tilt">
+          <span class="topic">The people behind it</span>
+          <h2 class="clip-h">No receipt. No record.</h2>
+          <p class="clip-p">Kabadiwalas <mark id="hl2">deal in cash, with no paper or GST trail</mark>, and experts want them recognised as collection agents.</p>
+          <p class="clip-src">Paraphrased from Mongabay India, May 2026</p>
+        </article>
+      </div>
+
+      <!-- 5. her -->
+      <div class="layer" id="sc-her">
+        <div class="photo-wrap" id="photo">
+          <img src="img/kabadiwala.jpg" alt="An elderly woman carrying a tied bundle of newspapers on her head (AI-generated image)" id="herimg">
+          <span class="tear" id="tear" aria-hidden="true"></span>
+          <span class="glint" id="glint" aria-hidden="true"></span>
+        </div>
+        <div class="grain" aria-hidden="true"></div>
+        <div class="her-copy" id="her1">
+          <span class="eyebrow">This is who carries it</span>
+          <h2 class="news-h">She is paid by the kilo, in cash.</h2>
+          <p>No receipt for what she brings in, so no proof of what she earns. No bank can see her work, and new rules shut out collectors who are not on record.</p>
+        </div>
+        <div class="her-copy end" id="her2">
+          <h2 class="news-h">Lakhs of kabadiwalas like her keep India's recycling running.</h2>
+          <p>Not one kilo of it is on paper.</p>
+        </div>
+        <span class="ai-label">AI-generated image</span>
+      </div>
+
+      <!-- 6. the answer -->
+      <div class="layer" id="sc-cta">
+        <div class="cta-copy">
+          <span class="eyebrow">Kabadi Khata</span>
+          <h2 class="news-h big">We put every kilo on paper.</h2>
+          <p>A receipt for her, a fraud radar for the auditor, and proof a brand can check.</p>
+          <div class="hero-actions"><a class="btn btn-primary" href="console.html">Open the console →</a></div>
+        </div>
+      </div>
+
+      <ol class="story-dots" aria-hidden="true"><li></li><li></li><li></li><li></li><li></li><li></li></ol>
     </div>
   </section>
 </main>

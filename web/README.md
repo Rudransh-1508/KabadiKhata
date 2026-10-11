@@ -11,5 +11,6 @@ make web                  # http://localhost:8600
 ```
 
 `KK_API_URL` points the forwarder at another API. The Streamlit console (`make console`) still works.
-All data shown is synthetic, and every page carries the badge. The landing hero is drawn in code
-(bottles and newspaper bundles), so it has no image to license.
+All data shown is synthetic, and every page carries the badge. The landing hero and the floating scrap are drawn
+in code, so they have no image to license. `img/kabadiwala.jpg` is an AI-generated image (labelled on the page).
+The two newspaper clippings quote their sources on the page: SCC Online (31 July 2024) and Mongabay India (May 2026).
