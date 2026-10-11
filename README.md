@@ -93,6 +93,10 @@ speech-to-text writes the transcript; code (`src/perception/hinglish.py`) reads 
 30 scripted Hindi/Hinglish lines (fractions like *dedh*, *saadhe teen*, every material, one prompt-injection line):
 - **Weight right on 64 of 64 synthetic clips.**
 - Material right on 30/30 clips in Sarvam Bulbul voices, 28/30 in the macOS Hindi voice, 3/4 in Gemini voices.
+- **Real voice notes from a team member (WhatsApp): weight and material right on 3 of 3.** n is small, so it is reported as 3/3, not a percentage.
+- The other 5 script lines, spoken in that team member's cloned voice (Sarvam voice cloning; synthetic, and from the same
+  vendor as the transcriber, so an easier test than real phone audio; never counted as real): 5 of 5, including the
+  prompt-injection line, which stays a Stated weight to check, not an instruction.
 
 **Photo → Scale reading** (`eval/photo_eval.py`, scored once on the held-out split). Photos are the team's 30
 AI-generated kabadi scale images ([Kaggle](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala)), split 20 for tuning and
@@ -118,8 +122,8 @@ writes nothing. A misread photo costs a question, not a false Receipt.
 ## Credits & licences
 - Fonts: system fonts (Segoe UI/Arial) at runtime; _[TODO: if an OFL font (Noto/DejaVu) is bundled, credit it here]._
 - Libraries: python-telegram-bot, Pillow, qrcode, pydub, Streamlit, pandas, FastAPI, Uvicorn, Mangum, opensearch-py, httpx, honcho, Strands Agents, cedarpy (see each project's licence). OpenSearch runs from the `opensearchproject/opensearch` image (Apache-2.0).
-- **Eval photos:** "kabadiwala" dataset by the team (Apache-2.0), [kaggle.com/datasets/oneshikaaa/kabadiwala](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala). AI-generated images, labelled synthetic. _[TODO: P1 — name the image generators used.]_
-- **Speech:** [Sarvam AI](https://www.sarvam.ai) Saaras (speech-to-text, used by `transcribe`) and Bulbul (text-to-speech, synthetic eval clips) via their API; the macOS "Lekha" Hindi voice for more synthetic clips.
+- **Eval photos:** "kabadiwala" dataset by the team (Apache-2.0), [kaggle.com/datasets/oneshikaaa/kabadiwala](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala). AI-generated images (made with Google's Nano Banana image model), labelled synthetic.
+- **Speech:** [Sarvam AI](https://www.sarvam.ai) Saaras (speech-to-text, used by `transcribe`) and Bulbul (text-to-speech, synthetic eval clips) and voice cloning (synthetic clips in a team member's voice, with their recordings) via their API; the macOS "Lekha" Hindi voice for more synthetic clips.
 - **Vision:** [Groq](https://groq.com) serving `qwen/qwen3.8-27b` reads the scale photo, with Google Gemini (`gemini-flash-latest`, via the `google-genai` SDK) as the fallback; OpenAI and xAI Grok are optional further fallbacks. Gemini is also the fallback transcriber.
 
 ## Team
