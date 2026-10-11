@@ -150,7 +150,7 @@
 
   // ---------- 5. her: zoom into the full photo, crossfade into the close-up lined up on her face, then into the teary eye ----------
   const FULL = { mid: { x: 0.507, y: 0.716 }, eyes: 0.134 };          // eye midpoint and eye distance, as fractions of the full photo
-  const CLOSE = { mid: { x: 0.513, y: 0.381 }, eyes: 0.418, eye: { x: 0.728, y: 0.405 } };
+  const CLOSE = { mid: { x: 0.559, y: 0.495 }, eyes: 0.314, eye: { x: 0.405, y: 0.5 } };
   function place(el, s, fx, fy, dx = 0, dy = 0) {
     el.style.transform = `translate(${dx - s * el.offsetWidth * fx}px, ${dy - s * el.offsetHeight * fy}px) scale(${s})`;
   }
@@ -164,7 +164,7 @@
     // close-up scaled so its eyes sit exactly where the full photo's eyes are on screen
     const match = (sA * FULL.eyes * p1.offsetWidth) / (CLOSE.eyes * p2.offsetWidth);
     const zB = io(span(t, 0.52, 0.82));                                  // close-up -> the teary eye
-    const sB = match * (1 + zB * 5.6);
+    const sB = match * (1 + zB * 3.6);
     place(p2, sB, CLOSE.mid.x + (CLOSE.eye.x - CLOSE.mid.x) * zB, CLOSE.mid.y + (CLOSE.eye.y - CLOSE.mid.y) * zB);
     const x = span(t, 0.42, 0.52);
     p1.style.opacity = appear * (1 - x);
