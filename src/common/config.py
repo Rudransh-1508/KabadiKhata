@@ -109,3 +109,8 @@ def xai_vision_model_id() -> str:
 
 def groq_vision_model_id() -> str:
     return os.getenv("GROQ_VISION_MODEL_ID", "qwen/qwen3.8-27b").strip()
+
+
+def groq_model_id() -> str:
+    """Groq model for the agent and the radar explainer (LLM_PROVIDER=groq); photos use GROQ_VISION_MODEL_ID."""
+    return os.getenv("GROQ_MODEL_ID", "qwen/qwen3.8-27b").strip()

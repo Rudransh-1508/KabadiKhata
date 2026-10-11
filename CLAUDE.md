@@ -20,7 +20,7 @@ Build the **spine (P0)** first and do not start anything else until all 4 beats 
 
 ## Hard constraints
 - **Build It only.** No AWS account, Bedrock, S3, DynamoDB or Cognito. The AWS open-source tools we use: **Strands Agents, Cedar, SAM CLI (`sam local invoke`), OpenSearch** (read-only search copy, ADR 0002).
-- **LLM:** Gemini (or OpenAI) through Strands' non-Bedrock model provider. Always pass the model explicitly, because Strands defaults to Bedrock.
+- **LLM:** Gemini, OpenAI or Groq (`LLM_PROVIDER`) through Strands' non-Bedrock model providers; Groq uses the OpenAI provider with a key-fallback client (`src/common/groq.py`). Always pass the model explicitly, because Strands defaults to Bedrock.
 - **Hackathon rules:** no code written before the clock started; repo history must match the event dates; every member commits every day; list the AI coding tools used in the README; credit every dataset, icon and library with its licence.
 - **Never commit secrets.** API keys and the Telegram token live in `.env` (gitignored). `.env.example` has placeholders only.
 - **Only build what appears in the 3-minute video.** Anything else waits until after submission.

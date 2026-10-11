@@ -256,6 +256,8 @@ def _model_label() -> str:
             return f"{provider}:{config.gemini_model_id()}"
         if provider == "openai":
             return f"{provider}:{config.openai_model_id()}"
+        if provider == "groq":
+            return f"{provider}:{config.groq_model_id()}"
         return f"{provider}:unknown"
     except Exception:
         return "unknown:unknown"
@@ -410,6 +412,9 @@ def _default_completer() -> Completer:
         from strands.models.openai import OpenAIModel
         model = OpenAIModel(client_args={"api_key": os.environ["OPENAI_API_KEY"]},
                             model_id=config.openai_model_id(), params={"temperature": 0})
+    elif provider == "groq":
+        from common.groq import GroqModel
+        model = GroqModel(model_id=config.groq_model_id(), timeout_s=config.explain_timeout_s())
     else:
         raise ValueError(f"unknown LLM_PROVIDER {provider!r}")
 

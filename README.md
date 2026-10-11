@@ -61,7 +61,7 @@ make smoke       # in a second terminal: checks every endpoint and the 4 spine b
 ```
 - **Bot:** put `TELEGRAM_BOT_TOKEN` in `.env` (gitignored). Without it `make demo` runs everything except the bot. Flow: `/start` → photo → material → kg → receipt card; `/demo` toggles a simulated mismatch; `/hisaab` returns the income-statement image.
 - **Console:** http://localhost:8501, switch Auditor / Brand in the sidebar.
-- **Real LLM:** set `MOCK_LLM=0` and `GEMINI_API_KEY` in `.env`.
+- **Real LLM:** set `MOCK_LLM=0` and `GEMINI_API_KEY` in `.env`. Or run the agent and the radar explainer on Groq too: `LLM_PROVIDER=groq` with `GROQ_API_KEYS=key1,key2,...` (a rate-limited key hands the request to the next one).
 - **One at a time:** `make api`, `make bot`, `make console`, `make up` / `make down` (OpenSearch), `make seed`, `make reindex`.
 - **Video helpers:** `make tamper COLLECTOR=kw-raju SEQ=0 KG=40` (backup for the live `sqlite3` edit), `make sam-invoke` (the app as an arm64 Lambda: one receipt written, one Cedar denial).
 
@@ -121,7 +121,7 @@ writes nothing. A misread photo costs a question, not a false Receipt.
 
 ## Credits & licences
 - Fonts: system fonts (Segoe UI/Arial) at runtime; _[TODO: if an OFL font (Noto/DejaVu) is bundled, credit it here]._
-- Libraries: python-telegram-bot, Pillow, qrcode, pydub, Streamlit, pandas, FastAPI, Uvicorn, Mangum, opensearch-py, httpx, honcho, Strands Agents, cedarpy (see each project's licence). OpenSearch runs from the `opensearchproject/opensearch` image (Apache-2.0).
+- Libraries: python-telegram-bot, Pillow, qrcode, pydub, Streamlit, pandas, FastAPI, Uvicorn, Mangum, opensearch-py, httpx, honcho, Strands Agents, OpenAI Python SDK (the client for Groq's OpenAI-compatible API), cedarpy (see each project's licence). OpenSearch runs from the `opensearchproject/opensearch` image (Apache-2.0).
 - **Eval photos:** "kabadiwala" dataset by the team (Apache-2.0), [kaggle.com/datasets/oneshikaaa/kabadiwala](https://www.kaggle.com/datasets/oneshikaaa/kabadiwala). AI-generated images (made with Google's Nano Banana image model), labelled synthetic.
 - **Speech:** [Sarvam AI](https://www.sarvam.ai) Saaras (speech-to-text, used by `transcribe`) and Bulbul (text-to-speech, synthetic eval clips) and voice cloning (synthetic clips in a team member's voice, with their recordings) via their API; the macOS "Lekha" Hindi voice for more synthetic clips.
 - **Vision:** [Groq](https://groq.com) serving `qwen/qwen3.8-27b` reads the scale photo, with Google Gemini (`gemini-flash-latest`, via the `google-genai` SDK) as the fallback; OpenAI and xAI Grok are optional further fallbacks. Gemini is also the fallback transcriber.

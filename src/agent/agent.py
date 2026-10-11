@@ -89,6 +89,9 @@ def build_model(session: Session):
         return OpenAIModel(client_args={"api_key": os.environ["OPENAI_API_KEY"],
                                         "timeout": config.agent_timeout_s(), "max_retries": 0},
                            model_id=config.openai_model_id(), params={"temperature": 0})
+    if provider == "groq":
+        from common.groq import GroqModel
+        return GroqModel(model_id=config.groq_model_id(), timeout_s=config.agent_timeout_s())
     raise ValueError(f"unknown LLM_PROVIDER {provider!r}")
 
 
