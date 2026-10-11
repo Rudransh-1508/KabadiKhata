@@ -18,9 +18,6 @@
 
 Our entry for **Environmental Hacks** (WeMakeDevs × AWS Bharat Builds Tour), **Waste & Energy** track, **Build It** category: everything runs locally on open-source AWS tools, with no AWS account.
 
-> [!IMPORTANT]
-> All seeded data in this repo and on every screen is **synthetic** and labelled as such. The **38×** fraud case is **our simulation**, not a CPCB finding.
-
 ## Overview
 
 > In 2024, the NGT took up CPCB's finding of 6 lakh fake recycling (EPR) certificates from four plastic recyclers.
