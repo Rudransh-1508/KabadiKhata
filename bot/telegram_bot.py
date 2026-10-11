@@ -44,7 +44,7 @@ from telegram.ext import (
 )
 import bot.mock_api as api  # <- the swap point (see module docstring)
 from bot.cards import make_hisaab_card, make_receipt_card
-from bot.strings_hi import MATERIAL_ORDER, material_label, t
+from bot.strings_hi import LANG_DEFAULT, MATERIAL_ORDER, material_label, set_lang, t
 
 logging.basicConfig(format="%(asctime)s %(name)s %(levelname)s %(message)s", level=logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)  # httpx URLs contain the bot token
@@ -143,6 +143,18 @@ def retry_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton(t("btn_retry"), callback_data="again")]])
 
 
+# Shown before a language is set, so it is deliberately trilingual.
+LANG_PROMPT = "भाषा चुनें / Choose language / Bhasha chuno:"
+
+
+def language_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("English", callback_data="lang:en"),
+        InlineKeyboardButton("हिंदी", callback_data="lang:hi_dev"),
+        InlineKeyboardButton("Hinglish", callback_data="lang:hi"),
+    ]])
+
+
 def load_env(path) -> None:
     """Tiny .env loader: KEY=VALUE lines, '#' comments, BOM-safe; never overrides real env."""
     p = Path(path)
@@ -186,6 +198,7 @@ def safe(fn):
     @functools.wraps(fn)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
+            set_lang((context.user_data or {}).get("lang", LANG_DEFAULT))
             await fn(update, context)
         except Exception:
             log.exception("handler %s failed", fn.__name__)
@@ -216,6 +229,12 @@ async def _route_to_registration(msg, ud: dict) -> None:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ud, msg = context.user_data, update.effective_message
     ud.setdefault("pending", {"material": None, "kg_buf": "", "photo_b64": None})
+    _set_state(ud, "need_language")
+    await msg.reply_text(LANG_PROMPT, reply_markup=language_keyboard())
+
+
+async def _begin_registration(msg, ud: dict) -> None:
+    """Welcome the user in their chosen language and route to the next step."""
     await msg.reply_text(t("welcome"), parse_mode=ParseMode.MARKDOWN)
     if not ud.get("name"):
         _set_state(ud, "need_name")
@@ -226,6 +245,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         _set_state(ud, "ready")
         await msg.reply_text(t("send_photo"))
+
+
+@safe
+async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    ud, msg = context.user_data, update.effective_message
+    ud.setdefault("pending", {"material": None, "kg_buf": "", "photo_b64": None})
+    _set_state(ud, "need_language")
+    await msg.reply_text(LANG_PROMPT, reply_markup=language_keyboard())
+
+
+@safe
+async def language_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    ud, msg = context.user_data, update.effective_message
+    lang = query.data.split(":", 1)[1]
+    if lang not in ("en", "hi", "hi_dev"):
+        return  # stale/unknown button
+    ud["lang"] = lang
+    set_lang(lang)  # so this handler's own replies use the new language immediately
+    await _begin_registration(msg, ud)
 
 
 @safe
@@ -519,9 +559,11 @@ def main() -> None:
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("cancel", cancel_cmd))
     app.add_handler(CommandHandler("demo", demo_cmd))
+    app.add_handler(CommandHandler("language", language_cmd))
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     app.add_handler(MessageHandler(filters.VOICE, voice_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
+    app.add_handler(CallbackQueryHandler(language_cb, pattern=r"^lang:"))
     app.add_handler(CallbackQueryHandler(locality_cb, pattern=r"^loc:"))
     app.add_handler(CallbackQueryHandler(material_cb, pattern=r"^mat:"))
     app.add_handler(CallbackQueryHandler(keypad_cb, pattern=r"^kg:"))
