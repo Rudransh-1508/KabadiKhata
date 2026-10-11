@@ -1,7 +1,7 @@
 // Bottle-pile mosaic for the landing hero.
 // A pile of crushed plastic bottles is drawn procedurally (no photo, nothing to license), sampled into blocks,
-// and the blocks near the cursor push away and swirl. Some blocks near the cursor turn into receipt tags:
-// the picture is made of verified receipts. All tag values are synthetic.
+// and the blocks near the cursor push away and swirl. Some blocks near the cursor turn into receipt tags;
+// each tag is a real Receipt from the ledger (the synthetic demo world).
 (function () {
   const canvas = document.getElementById("mosaic");
   const tagLayer = document.getElementById("tags");
@@ -115,20 +115,39 @@
     return { img: g.getImageData(0, 0, w, h), idx: ix.getImageData(0, 0, w, h) };
   }
 
-  const PEOPLE = [["Raju", "Seelampur"], ["Sunita", "Okhla"], ["Imran", "Shahdara"], ["Kamla", "Govindpuri"], ["Ramesh", "Karol Bagh"], ["Shabnam", "Mustafabad"], ["Mohan", "Narela"], ["Rekha", "Lajpat Nagar"]];
+  // Tags show real Receipts: live from the API (web/server.py), else the snapshot of the same seeded world.
+  // Newspaper blocks get paper or cardboard Receipts, bottle blocks get PET or HDPE ones.
+  const LABEL = { paper: "newspaper (raddi)", cardboard: "cardboard", PET: "plastic bottles", HDPE: "hard plastic" };
+  const POOL = { 0: [], 1: [] };
+  function fill(list) {
+    POOL[0] = list.filter((r) => r.m === "paper" || r.m === "cardboard");
+    POOL[1] = list.filter((r) => r.m === "PET" || r.m === "HDPE");
+  }
+  (async function loadReceipts() {
+    const get = (p) => fetch("/api" + p, { headers: { "X-Principal": "au-1" } }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
+    try {
+      const kws = await get("/actors?role=kabadiwala");
+      const chains = await Promise.all(kws.map((k) => get("/receipts?collector_id=" + encodeURIComponent(k.actor_id))
+        .then((c) => c.receipts.map((r) => ({ kg: r.weight_kg, m: r.material, who: k.name, at: r.locality })))));
+      fill(chains.flat());
+    } catch (e) {
+      try { fill((await fetch("receipts-sample.json").then((r) => r.json())).receipts); } catch (e2) { /* no tags */ }
+    }
+  })();
 
   let cells = [], cell = 14, cols = 0, rows = 0, W = 0, H = 0, dpr = 1;
   let mouse = { x: -9999, y: -9999, on: false };
 
   // a receipt for ~2% of blocks, naming the scrap actually under that block
-  function receiptFor(idx, i, j) {
+  let slots = 0;
+  function receiptFor(idx, i, j) {                              // marks ~2% of blocks; the Receipt is chosen when shown
     if (rnd() >= 0.02) return null;
     const p = ((j * 4 + 2) * idx.width + (i * 4 + 2)) * 4;
     const t = Math.round(idx.data[p] / 30) - 1;
     if (t < 0 || t >= TYPES.length) return null;               // empty ground: no receipt
-    const [lo, hi] = TYPES[t].kg;
-    return { who: pick(PEOPLE), kg: (lo + rnd() * (hi - lo)).toFixed(1).replace(/\.0$/, ""), m: TYPES[t].label };
+    return { t, n: slots++ };
   }
+  const realFor = (slot) => { const pool = POOL[slot.t]; return pool.length ? pool[slot.n % pool.length] : null; };
 
   function build() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -173,7 +192,7 @@
           tx = Math.cos(ang) * f * 46 - cx * f * 0.15;
           ty = Math.sin(ang) * f * 46 - cy * f * 0.15;
           trot = f * 1.2;
-          if (c.receipt && d < R * 0.8) shown.push([d, c]);
+          if (c.receipt && realFor(c.receipt) && d < R * 0.8) shown.push([d, c]);
         }
       }
       c.ox += (tx - c.ox) * 0.16; c.oy += (ty - c.oy) * 0.16; c.rot += (trot - c.rot) * 0.16;
@@ -205,7 +224,9 @@
         if (!c.tagEl) {
           c.tagEl = document.createElement("div");
           c.tagEl.className = "tag";
-          c.tagEl.innerHTML = `${c.receipt.kg} kg ${c.receipt.m} <span class="ok">✓</span><br><span class="id">${c.receipt.who[0]} · ${c.receipt.who[1]}</span>`;
+          const r = realFor(c.receipt);
+          const esc = (s) => String(s).replace(/[&<>"]/g, (x) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[x]));
+          c.tagEl.innerHTML = `${esc(Number(r.kg).toFixed(1).replace(/\.0$/, ""))} kg ${esc(LABEL[r.m] || r.m)} <span class="ok">✓</span><br><span class="id">${esc(r.who)} · ${esc(r.at)}</span>`;
           tagLayer.appendChild(c.tagEl);
           requestAnimationFrame(() => c.tagEl && c.tagEl.classList.add("on"));
         }

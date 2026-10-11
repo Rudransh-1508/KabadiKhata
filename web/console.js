@@ -426,8 +426,9 @@
         <div style="margin-top:28px"><p class="section-label">Where the scrap came from (totals by area, no names)</p>
           <div class="inkbars">${p.by_locality.map((l) => `<div class="inkbar">${esc(l.locality)}<div class="track"><div class="fill green" data-w="${(l.tonnes / maxT) * 100}"></div></div><span class="v">${fmt(l.tonnes, 3)} t</span></div>`).join("")
             || `<p class="fine">No verified receipts behind this certificate.</p>`}</div></div>
-        <div class="redacted" style="margin-top:30px" id="redacted"><p class="section-label" style="margin:0">Kabadiwalas behind these tonnes</p>
-          <ol>${["9em", "7em", "11em", "8em"].map((w, i) => `<li><span class="bar" style="width:${w}"></span>, ${["Seelampur", "Okhla", "Shahdara", "Narela"][i]}</li>`).join("")}</ol>
+        <div class="redacted" style="margin-top:30px" id="redacted"><p class="section-label" style="margin:0">Kabadiwalas behind these tonnes, by area</p>
+          <ol>${p.by_locality.map((l) => `<li><span class="bar" style="width:${6 + (l.locality.length % 6)}em"></span>, ${esc(l.locality)} · ${fmt(l.receipts)} receipt${l.receipts === 1 ? "" : "s"}</li>`).join("")
+            || `<li>No verified receipts behind this certificate.</li>`}</ol>
           <div><button class="btn btn-primary btn-lg" id="ask">Request their names</button></div>
           <div id="denial"></div></div>
       </section>`));
@@ -444,13 +445,16 @@
 
   function deniedHtml(d) {
     return `<div class="denial"><p><b>Refused by Cedar policy.</b> Action <code>${esc(d && d.action)}</code>: ${esc(d && d.reason)}.</p>
-      <pre>// policies.cedar: the one thing a brand may do
+      <pre>// Kabadi Khata policies. Default deny: anything not permitted below is denied,
+// and \`forbid\` always beats \`permit\`.
+...
+// 2. Brand: provenance of its own Certificates only (aggregate view, never a Kabadiwala identity).
 @id("brand-own-certificates")
 permit (
   principal is Actor in Role::"brand",
   action == Action::<em>"read_provenance"</em>,
   resource is Certificate
-) when { resource.buyer == principal };   <em>// everything else: denied by default</em></pre></div>`;
+) when { resource has buyer && resource.buyer == principal };</pre><p class="fine">Quoted from src/policy/policies.cedar.</p></div>`;
   }
 
   // ---------- router ----------
