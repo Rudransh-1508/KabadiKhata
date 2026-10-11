@@ -57,6 +57,7 @@ class Flag(BaseModel):
     decided_ts: Optional[datetime] = None
     facts: dict = Field(default_factory=dict)        # numbers an explanation may cite; keys per rule (src/radar/explain.py)
     decision_note: Optional[str] = None              # Auditor's free text, set by decide_flag
+    explanation_source: Optional[Literal["rule", "template", "llm"]] = None  # who wrote the explanation text
 
 
 class Actor(BaseModel):

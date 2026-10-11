@@ -181,3 +181,124 @@ def test_unregistered_callback_routes_to_start():
     asyncio.run(tb.material_cb(update, _ctx(ud)))
     assert ud["state"] == "need_name"
     assert msg.reply_text.await_args_list[0].args[0] == strings_hi.t("need_start")
+
+
+# ---- voice notes (photo, then a voice note replaces the taps) ----
+def _voice_update(ogg=b"OggSfake-voice-bytes"):
+    update = MagicMock()
+    msg = MagicMock()
+    msg.reply_text = AsyncMock()
+    msg.reply_photo = AsyncMock()
+    f = MagicMock()
+    f.download_as_bytearray = AsyncMock(return_value=bytearray(ogg))
+    msg.voice.get_file = AsyncMock(return_value=f)
+    update.effective_message = msg
+    update.effective_user.id = 7
+    return update, msg
+
+
+def test_build_payload_voice_has_audio_no_taps():
+    p = tb.build_payload(42, "seelampur", None, None, False, "photo", audio_b64="AUD")
+    assert p["audio_b64"] == "AUD"
+    assert p.get("taps") is None
+    assert p["photo_b64"] == "photo"
+    # the tap path is unchanged: taps present, no audio_b64 key
+    q = tb.build_payload(42, "seelampur", "PET", 3, False, "photo")
+    assert q["taps"] == {"material": "PET", "kg": 3.0} and "audio_b64" not in q
+
+
+def test_voice_unregistered_asks_start():
+    update, msg = _voice_update()
+    asyncio.run(tb.voice_handler(update, _ctx({})))
+    msg.reply_photo.assert_not_awaited()
+    assert msg.reply_text.await_args.args[0] == strings_hi.t("need_start")
+
+
+def test_voice_without_photo_asks_for_photo():
+    ud = {"name": "Raju", "locality": "seelampur", "state": "ready",
+          "pending": {"material": None, "kg_buf": "", "photo_b64": None}}
+    update, msg = _voice_update()
+    asyncio.run(tb.voice_handler(update, _ctx(ud)))
+    msg.reply_photo.assert_not_awaited()
+    assert msg.reply_text.await_args.args[0] == strings_hi.t("send_photo")
+
+
+def test_voice_with_photo_sends_audio_and_returns_receipt(monkeypatch):
+    captured = {}
+    real = tb.api.collect
+
+    def spy(payload):
+        captured["payload"] = payload
+        return real(payload)
+
+    monkeypatch.setattr(tb.api, "collect", spy)
+    ud = {"name": "Raju", "locality": "seelampur", "state": "choosing_material",
+          "pending": {"material": None, "kg_buf": "", "photo_b64": "PHOTOB64"}}
+    update, msg = _voice_update()
+    asyncio.run(tb.voice_handler(update, _ctx(ud)))
+
+    # the voice note was downloaded, base64'd, and sent as audio_b64 with no taps
+    assert captured["payload"].get("audio_b64")
+    assert captured["payload"].get("taps") is None
+    assert captured["payload"]["photo_b64"] == "PHOTOB64"
+    # a receipt card came back and the flow reset to ready
+    msg.reply_photo.assert_awaited_once()
+    assert msg.reply_photo.await_args.kwargs["photo"].startswith(b"\x89PNG")
+    assert ud["state"] == "ready"
+
+
+# ---- language: English / Hinglish / Devanagari Hindi ----
+def _is_devanagari(s):
+    return any("ऀ" <= ch <= "ॿ" for ch in s)
+
+
+def test_hi_dev_table_covers_all_keys_and_is_devanagari():
+    assert set(strings_hi.HI_DEV) == set(strings_hi.HI) == set(strings_hi.EN)
+    assert _is_devanagari(strings_hi.HI_DEV["welcome"])
+
+
+def test_t_three_languages():
+    assert strings_hi.t("ask_name", lang="en") == strings_hi.EN["ask_name"]
+    assert strings_hi.t("ask_name", lang="hi") == strings_hi.HI["ask_name"]
+    assert strings_hi.t("ask_name", lang="hi_dev") == strings_hi.HI_DEV["ask_name"]
+
+
+def test_t_uses_contextvar_when_no_lang():
+    try:
+        strings_hi.set_lang("en")
+        assert strings_hi.t("ask_name") == strings_hi.EN["ask_name"]
+        strings_hi.set_lang("hi_dev")
+        assert strings_hi.t("ask_name") == strings_hi.HI_DEV["ask_name"]
+    finally:
+        strings_hi.set_lang(strings_hi.LANG_DEFAULT)
+
+
+def test_material_label_devanagari():
+    lbl = strings_hi.material_label("PET", lang="hi_dev")
+    assert lbl == strings_hi.MATERIAL_LABELS["PET"]["hi_dev"]
+    assert _is_devanagari(lbl)
+
+
+def test_start_asks_language_first():
+    ud = {}
+    update, msg = _cb_update("")
+    asyncio.run(tb.start(update, _ctx(ud)))
+    assert ud["state"] == "need_language"
+    cbs = _cbs(msg.reply_text.await_args.kwargs["reply_markup"])
+    assert set(cbs) == {"lang:en", "lang:hi", "lang:hi_dev"}
+
+
+def test_language_pick_sets_lang_and_asks_name_in_that_language():
+    ud = {"pending": {"material": None, "kg_buf": "", "photo_b64": None}}
+    update, msg = _cb_update("lang:en")
+    asyncio.run(tb.language_cb(update, _ctx(ud)))
+    assert ud["lang"] == "en" and ud["state"] == "need_name"
+    texts = [c.args[0] for c in msg.reply_text.await_args_list]
+    assert strings_hi.EN["ask_name"] in texts
+
+
+def test_safe_wrapper_applies_user_language():
+    ud = {"lang": "en"}
+    update, msg = _cb_update("")
+    asyncio.run(tb.help_cmd(update, _ctx(ud)))
+    assert msg.reply_text.await_args.args[0] == strings_hi.EN["help"]

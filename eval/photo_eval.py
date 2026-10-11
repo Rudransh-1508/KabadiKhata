@@ -31,7 +31,8 @@ LABELS = Path("data/eval_photos/labels.csv")
 SET_DIRS = {"kaggle_ai": Path("data/eval_photos/kabadiwala"), "real": Path("data/eval_photos/real")}
 SET_NAMES = {"kaggle_ai": "AI-generated kabadi scale photos (synthetic; kaggle.com/datasets/oneshikaaa/kabadiwala, Apache-2.0)",
              "real": "Real phone photos taken by the team"}
-KG_TOLERANCE = 0.05
+KG_TOLERANCE = 0.05     # CLAUDE.md #6: the headline number
+TICK_KG = 1.0           # secondary: about one small tick on a 50 kg dial
 PAUSE_S = float(os.getenv("EVAL_PAUSE_S", "6"))  # free tier: about 10 model calls a minute
 
 
@@ -44,13 +45,23 @@ def as_bot_sends(path: Path) -> bytes:
 
 
 def _cached(raw: bytes) -> bool:
-    return os.path.exists(photo._cache_path(photo._cache_key(raw)))
+    return photo.is_cached(raw)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="heldout", choices=["heldout", "tune", "all"])
-    split = ap.parse_args().split
+    ap.add_argument("--provider", choices=sorted(photo.config.VISION_KEYS),
+                    help="score one vision provider only (no fallback); results get its name")
+    args = ap.parse_args()
+    split = args.split
+    if args.provider:  # only this provider's key counts, so no answer can come from a fallback
+        os.environ["VISION_PROVIDER"] = args.provider
+        for name, key in photo.config.VISION_KEYS.items():
+            if name != args.provider:
+                os.environ[key] = ""
+        if args.provider != "groq":
+            os.environ["GROQ_API_KEYS"] = ""  # Groq's rotating keys count too
 
     rows = [r for r in csv.DictReader(LABELS.open(encoding="utf-8")) if split in ("all", r["split"])]
     unlabelled = [r["file"] for r in rows if r["readable"] not in ("yes", "no")
@@ -59,10 +70,11 @@ def main() -> int:
         print(f"Label these first (true_kg + readable in {LABELS}): {', '.join(unlabelled)}")
         return 1
 
-    report = [f"# read_photo eval: {split} split", ""]
+    report = [f"# read_photo eval: {split} split", "",
+              f"Model: {photo.model_tags()} (prompt {photo.PROMPT_VERSION})", ""]
     for set_id, set_rows in _by_set(rows).items():
         report += _score(set_id, set_rows)
-    out = Path(f"eval/RESULTS_photo_{split}.md")
+    out = Path(f"eval/RESULTS_photo_{split}{'_' + args.provider if args.provider else ''}.md")
     out.write_text("\n".join(report) + "\n", encoding="utf-8")
     print("\n".join(line for line in report if line.startswith(("##", "- "))))
     print(f"Wrote {out}")
@@ -77,7 +89,7 @@ def _by_set(rows: list[dict]) -> dict[str, list[dict]]:
 
 
 def _score(set_id: str, rows: list[dict]) -> list[str]:
-    lines, kg_ok, kg_n, refuse_ok, refuse_n, mat_ok, errors = [], 0, 0, 0, 0, 0, 0
+    lines, kg_ok, kg_n, refuse_ok, refuse_n, mat_ok, errors, tick_ok = [], 0, 0, 0, 0, 0, 0, 0
     for r in rows:
         raw = as_bot_sends(SET_DIRS[set_id] / r["file"])
         was_cached = _cached(raw)
@@ -93,6 +105,7 @@ def _score(set_id: str, rows: list[dict]) -> list[str]:
         if r["readable"] == "yes":
             true = float(r["true_kg"])
             hit = got.kg is not None and abs(got.kg - true) <= KG_TOLERANCE * true
+            tick_ok += got.kg is not None and abs(got.kg - true) <= max(TICK_KG, KG_TOLERANCE * true)
             kg_n += 1
             kg_ok += hit
             verdict = "ok" if hit else "MISS"
@@ -116,6 +129,7 @@ def _score(set_id: str, rows: list[dict]) -> list[str]:
         "",
         *([f"- Model errors (not scored; run again to retry): {errors}"] if errors else []),
         f"- **kg within ±5%:** {pct(kg_ok, kg_n)} readable photos",
+        f"- kg within ±5% or ±1 kg (about one tick), whichever is wider: {pct(tick_ok, kg_n)}",
         f"- **Refused unreadable photos:** {pct(refuse_ok, refuse_n)}",
         f"- **Material correct:** {pct(mat_ok, scored)}",
         f"- n = {scored} photos scored",

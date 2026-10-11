@@ -1,0 +1,8 @@
+{
+  "KabadiKhataApi": {
+    "MOCK_LLM": "1",
+    "KK_DB_PATH": "/tmp/kk.db",
+    "KK_PHOTO_DIR": "/tmp/photos",
+    "KK_SEED_ON_COLD_START": "1"
+  }
+}

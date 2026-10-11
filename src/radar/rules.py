@@ -168,9 +168,9 @@ def run(store: Store, month: str | None = None) -> list[Flag]:
 
 
 def _explain(flag: Flag, store: Store) -> Flag:
-    """radar.explain fills only empty explanation text (never the verdict); text the rule already set stays."""
+    """radar.explain fills text and facts (never the verdict); the rule's text stays unless the LLM or a broken-Chain note replaces it."""
     from radar.explain import with_llm_explanation
-    return with_llm_explanation(flag)
+    return with_llm_explanation(flag, store=store)
 
 
 # ---------- brand view ----------

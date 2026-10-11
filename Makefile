@@ -6,10 +6,10 @@ include .env
 export
 endif
 
-.PHONY: install test api seed demo tamper sam-invoke up down reindex bot console smoke
+.PHONY: install test api seed demo tamper sam-invoke up down reindex bot console smoke lambda-deps
 
 install: .env
-	uv sync --extra dev --extra product --extra product
+	uv sync --extra dev --extra product
 
 .env:
 	cp .env.example .env
@@ -58,8 +58,27 @@ smoke:
 tamper:
 	uv run python -m ledger.tamper $(COLLECTOR) $(SEQ) $(KG)
 
-# The "Built on AWS" clip: build the API as an arm64 Lambda and invoke it with a collection event
-sam-invoke:
-	sam build --use-container
-	sam local invoke KabadiKhataApi --event events/collection.json
-	sam local invoke KabadiKhataApi --event events/brand-reads-receipts.json
+# Lambda dependencies: pinned from uv.lock and cross-installed for Linux arm64 on the host.
+# (Downloading them inside the SAM build container took 30+ minutes; Docker's network is ~40x slower here.)
+lambda-deps:
+	rm -rf .aws-sam-deps && mkdir -p .aws-sam-deps/layer
+	uv export --frozen --no-hashes --no-dev --no-emit-project --no-header --quiet > .aws-sam-deps/requirements.txt
+	uv pip install --quiet --target .aws-sam-deps/layer/python --python-platform aarch64-manylinux2014 \
+		--python-version 3.12 --only-binary :all: -r .aws-sam-deps/requirements.txt
+
+# The "Built on AWS" clip: build the API as an arm64 Lambda and invoke it with a collection event.
+# --env-vars pins the Lambda's settings; otherwise sam local copies matching values from .env (exported above).
+sam-invoke: lambda-deps
+	sam build
+	sam local invoke KabadiKhataApi --event events/collection.json --env-vars events/lambda-env.json
+	sam local invoke KabadiKhataApi --event events/brand-reads-receipts.json --env-vars events/lambda-env.json
+
+# Runs every attack against the real code and writes docs/redteam_scorecard.md (offline, ~15 s)
+.PHONY: redteam
+redteam:
+	MOCK_LLM=1 uv run python -m agent.redteam --md docs/redteam_scorecard.md
+
+# New web front end on http://localhost:8600 (another port: make web WEB_PORT=8633); needs `make api` running
+.PHONY: web
+web:
+	uv run uvicorn web.server:app --port $(or $(WEB_PORT),8600)

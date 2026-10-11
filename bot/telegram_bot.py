@@ -44,7 +44,7 @@ from telegram.ext import (
 )
 import bot.mock_api as api  # <- the swap point (see module docstring)
 from bot.cards import make_hisaab_card, make_receipt_card
-from bot.strings_hi import MATERIAL_ORDER, material_label, t
+from bot.strings_hi import LANG_DEFAULT, MATERIAL_ORDER, material_label, set_lang, t
 
 logging.basicConfig(format="%(asctime)s %(name)s %(levelname)s %(message)s", level=logging.INFO)
 logging.getLogger("httpx").setLevel(logging.WARNING)  # httpx URLs contain the bot token
@@ -93,14 +93,18 @@ def parse_kg(buf: str) -> float | None:
     return v if 0 < v <= 500 else None
 
 
-def build_payload(user_id, locality, material, kg, simulate, photo_b64=None) -> dict:
-    return {
+def build_payload(user_id, locality, material, kg, simulate, photo_b64=None, audio_b64=None) -> dict:
+    payload = {
         "collector_id": "kab_" + str(user_id),
         "locality": locality,
-        "taps": {"material": material, "kg": float(kg)},
+        # A voice note replaces the taps: material/kg are None, the agent transcribes.
+        "taps": {"material": material, "kg": float(kg)} if material is not None and kg is not None else None,
         "photo_b64": photo_b64,
         "simulate": "mismatch" if simulate else None,
     }
+    if audio_b64:
+        payload["audio_b64"] = audio_b64
+    return payload
 
 
 def resize_for_upload(raw: bytes, max_side: int = 1024) -> bytes:
@@ -137,6 +141,18 @@ def kg_keyboard() -> InlineKeyboardMarkup:
 
 def retry_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton(t("btn_retry"), callback_data="again")]])
+
+
+# Shown before a language is set, so it is deliberately trilingual.
+LANG_PROMPT = "भाषा चुनें / Choose language / Bhasha chuno:"
+
+
+def language_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[
+        InlineKeyboardButton("English", callback_data="lang:en"),
+        InlineKeyboardButton("हिंदी", callback_data="lang:hi_dev"),
+        InlineKeyboardButton("Hinglish", callback_data="lang:hi"),
+    ]])
 
 
 def load_env(path) -> None:
@@ -182,6 +198,7 @@ def safe(fn):
     @functools.wraps(fn)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
+            set_lang((context.user_data or {}).get("lang", LANG_DEFAULT))
             await fn(update, context)
         except Exception:
             log.exception("handler %s failed", fn.__name__)
@@ -212,6 +229,12 @@ async def _route_to_registration(msg, ud: dict) -> None:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ud, msg = context.user_data, update.effective_message
     ud.setdefault("pending", {"material": None, "kg_buf": "", "photo_b64": None})
+    _set_state(ud, "need_language")
+    await msg.reply_text(LANG_PROMPT, reply_markup=language_keyboard())
+
+
+async def _begin_registration(msg, ud: dict) -> None:
+    """Welcome the user in their chosen language and route to the next step."""
     await msg.reply_text(t("welcome"), parse_mode=ParseMode.MARKDOWN)
     if not ud.get("name"):
         _set_state(ud, "need_name")
@@ -222,6 +245,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         _set_state(ud, "ready")
         await msg.reply_text(t("send_photo"))
+
+
+@safe
+async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    ud, msg = context.user_data, update.effective_message
+    ud.setdefault("pending", {"material": None, "kg_buf": "", "photo_b64": None})
+    _set_state(ud, "need_language")
+    await msg.reply_text(LANG_PROMPT, reply_markup=language_keyboard())
+
+
+@safe
+async def language_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    ud, msg = context.user_data, update.effective_message
+    lang = query.data.split(":", 1)[1]
+    if lang not in ("en", "hi", "hi_dev"):
+        return  # stale/unknown button
+    ud["lang"] = lang
+    set_lang(lang)  # so this handler's own replies use the new language immediately
+    await _begin_registration(msg, ud)
 
 
 @safe
@@ -309,13 +353,35 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @safe
 async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.effective_message
-    await msg.reply_text(t("voice_soon"))
-    state = context.user_data.get("state")
-    if state == "choosing_material":
-        await msg.reply_text(t("choose_material"), reply_markup=material_keyboard())
-    elif state == "entering_kg":
-        await msg.reply_text(t("enter_weight"), reply_markup=kg_keyboard())
+    """A Hindi voice note replaces the taps: after a photo, the kabadiwala can just
+    say "baarah kilo plastic". We send the note as ``audio_b64`` (OGG as-is — the
+    backend transcribes it) with no taps; the agent reads the photo and the voice
+    and checks they agree (receipt, or one Hindi question)."""
+    ud, msg = context.user_data, update.effective_message
+    if not _registered(ud):
+        await msg.reply_text(t("need_start"))
+        return
+    photo_b64 = (ud.get("pending") or {}).get("photo_b64")
+    if not photo_b64:
+        # Voice replaces taps, but only after a scale photo (the demo spine).
+        await msg.reply_text(t("send_photo"))
+        return
+    try:
+        f = await msg.voice.get_file()
+        raw = bytes(await f.download_as_bytearray())
+        audio_b64 = base64.b64encode(raw).decode("ascii")
+    except Exception:
+        log.warning("voice download failed; asking to retry", exc_info=True)
+        await msg.reply_text(t("error_generic"))
+        return
+    simulate = ud.get("simulate_mismatch", False)
+    if simulate:
+        ud["simulate_mismatch"] = False  # fire once
+    payload = build_payload(
+        update.effective_user.id, ud["locality"], None, None, simulate,
+        demo_fixture_photo() if simulate else photo_b64, audio_b64=audio_b64,
+    )
+    await _run_collection(update, ud, payload)
 
 
 # --------------------------------------------------------------------------
@@ -404,18 +470,10 @@ async def keypad_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise
 
 
-async def _do_collect(update: Update, ud: dict, kg: float) -> None:
+async def _run_collection(update: Update, ud: dict, payload: dict) -> None:
+    """Send a built collection payload and handle the result (receipt / question /
+    error). Shared by the tap path (``_do_collect``) and the voice path."""
     msg = update.effective_message
-    pending = ud["pending"]
-    simulate = ud.get("simulate_mismatch", False)
-    if simulate:
-        ud["simulate_mismatch"] = False  # fire once
-    # In demo mode, send the fixture photo so the backend "reads" 12 kg and the
-    # real consistency rule refuses against the actual tapped weight.
-    photo_b64 = demo_fixture_photo() if simulate else pending.get("photo_b64")
-    payload = build_payload(
-        update.effective_user.id, ud["locality"], pending["material"], kg, simulate, photo_b64,
-    )
     await msg.reply_text(t("processing"))
     try:
         resp = await asyncio.to_thread(api.collect, payload)
@@ -437,6 +495,20 @@ async def _do_collect(update: Update, ud: dict, kg: float) -> None:
         _reset_pending(ud)
         _set_state(ud, "ready")
         await msg.reply_text(t("error_generic"))
+
+
+async def _do_collect(update: Update, ud: dict, kg: float) -> None:
+    pending = ud["pending"]
+    simulate = ud.get("simulate_mismatch", False)
+    if simulate:
+        ud["simulate_mismatch"] = False  # fire once
+    # In demo mode, send the fixture photo so the backend "reads" 12 kg and the
+    # real consistency rule refuses against the actual tapped weight.
+    photo_b64 = demo_fixture_photo() if simulate else pending.get("photo_b64")
+    payload = build_payload(
+        update.effective_user.id, ud["locality"], pending["material"], kg, simulate, photo_b64,
+    )
+    await _run_collection(update, ud, payload)
 
 
 @safe
@@ -487,9 +559,11 @@ def main() -> None:
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("cancel", cancel_cmd))
     app.add_handler(CommandHandler("demo", demo_cmd))
+    app.add_handler(CommandHandler("language", language_cmd))
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     app.add_handler(MessageHandler(filters.VOICE, voice_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
+    app.add_handler(CallbackQueryHandler(language_cb, pattern=r"^lang:"))
     app.add_handler(CallbackQueryHandler(locality_cb, pattern=r"^loc:"))
     app.add_handler(CallbackQueryHandler(material_cb, pattern=r"^mat:"))
     app.add_handler(CallbackQueryHandler(keypad_cb, pattern=r"^kg:"))

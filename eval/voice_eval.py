@@ -2,7 +2,8 @@
 
     uv run python eval/voice_eval.py
 
-Each set (`tts` = Gemini TTS, `say` = macOS Hindi voice, `real` = recordings by the team) is scored
+Each set (`tts` = Gemini TTS, `say` = macOS Hindi voice, `real` = recordings by the team,
+`clone` = Sarvam voice clone of the `real` speaker) is scored
 apart, over the clips that exist (n is stated per set):
 Stated weight exactly right (the plan's bar: 8 of 10 clips), and material right. Rows with no
 weight or material said expect None. A call that got no answer (quota, network) is a model error
@@ -18,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from _env import load_env  # noqa: E402
+from _voice_uploads import import_uploads  # noqa: E402
 
 load_env()
 from perception import voice  # noqa: E402
@@ -27,11 +29,15 @@ PAUSE_S = float(os.getenv("EVAL_PAUSE_S", "6"))  # free tier: about 10 model cal
 
 LABELS = Path("data/eval_voice/labels.csv")
 SET_DIRS = {"tts": Path("data/eval_voice/tts"), "say": Path("data/eval_voice/say"),
-            "sarvam": Path("data/eval_voice/sarvam"), "real": Path("data/eval_voice/real")}
+            "sarvam": Path("data/eval_voice/sarvam"), "real": Path("data/eval_voice/real"),
+            "clone": Path("data/eval_voice/clone")}
 SET_NAMES = {"tts": "Synthetic clips (Gemini text-to-speech, 6 voices)",
              "say": "Synthetic clips (macOS Hindi voice \"Lekha\")",
              "sarvam": "Synthetic clips (Sarvam Bulbul text-to-speech, 6 voices)",
-             "real": "Real voice notes recorded by the team"}
+             "real": "Real voice notes recorded by the team",
+             "clone": "Synthetic clips (Sarvam voice clone of a team member's real voice notes). Clean audio from "
+                      "the same vendor as the Sarvam transcriber: an easier test than real phone audio, so "
+                      "never add it to the `real` count"}
 
 
 def _num(s: str):
@@ -39,6 +45,7 @@ def _num(s: str):
 
 
 def main() -> int:
+    import_uploads()
     rows = [r for r in csv.DictReader(LABELS.open(encoding="utf-8")) if (SET_DIRS[r["set"]] / r["file"]).exists()]
     if not rows:
         print("No clips yet: run eval/gen_voice_clips.py (--engine say works offline) or record some.")
@@ -52,7 +59,7 @@ def main() -> int:
         lines, kg_ok, mat_ok, errors = [], 0, 0, 0
         for r in set_rows:
             raw = (SET_DIRS[set_id] / r["file"]).read_bytes()
-            cached = os.path.exists(voice._cache_path(voice._cache_key(raw)))
+            cached = voice.cache_file(raw) is not None
             got, status = transcribe_with_status(base64.b64encode(raw).decode())
             if not cached:
                 time.sleep(PAUSE_S)
