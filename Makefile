@@ -72,3 +72,8 @@ sam-invoke: lambda-deps
 	sam build
 	sam local invoke KabadiKhataApi --event events/collection.json --env-vars events/lambda-env.json
 	sam local invoke KabadiKhataApi --event events/brand-reads-receipts.json --env-vars events/lambda-env.json
+
+# Runs every attack against the real code and writes docs/redteam_scorecard.md (offline, ~15 s)
+.PHONY: redteam
+redteam:
+	MOCK_LLM=1 uv run python -m agent.redteam --md docs/redteam_scorecard.md

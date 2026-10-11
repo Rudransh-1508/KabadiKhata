@@ -78,7 +78,7 @@ Rules decide; the LLM only words the result. Flags come from the deterministic r
 
 **Which text is shown** (`explanation_source` on the Flag):
 
-1. `"llm"`: a key is set (`GEMINI_API_KEY` or `OPENAI_API_KEY`, per `LLM_PROVIDER`), `MOCK_LLM` is not 1, the call finishes in time and validation passes.
+1. `"llm"`: a key is set (`GEMINI_API_KEY`, `OPENAI_API_KEY` or `GROQ_API_KEYS`/`GROQ_API_KEY`, per `LLM_PROVIDER`), `MOCK_LLM` is not 1, the call finishes in time and validation passes.
 2. `"template"`: otherwise, when R1 excluded Receipts because a Kabadiwala's Chain is broken. The template then says so, names the Kabadiwalas and tonnes, and tells the Auditor to check the R3 Flag first.
 3. `"rule"`: otherwise, the rule's own text. Without an LLM key this is what the console shows.
 
@@ -105,6 +105,7 @@ cd src && MOCK_LLM=1 python -m agent.demo       # trace table for a pass and a m
 make seed                          # data/kk.db: the synthetic world file when present, else the built-in sample world
 make api                           # API on port 3000
 python scripts/smoke_real_llm.py   # real-LLM check (needs a key)
+make redteam                       # every attack against the real code -> docs/redteam_scorecard.md
 ```
 
 `MOCK_LLM=1` drives the real Strands loop with a scripted model, so nothing calls the network. The tests are offline.
@@ -114,9 +115,10 @@ python scripts/smoke_real_llm.py   # real-LLM check (needs a key)
 | Variable | Meaning |
 |---|---|
 | `MOCK_LLM` | `1` replays with the scripted model and templates (tests, rate-limit emergencies) |
-| `LLM_PROVIDER` | `gemini` (default) or `openai` |
+| `LLM_PROVIDER` | `gemini` (default), `openai` or `groq` (Strands' OpenAI model on Groq, with key fallback in `src/common/groq.py`) |
 | `GEMINI_API_KEY`, `OPENAI_API_KEY` | key for the chosen provider; placeholders only in `.env.example`, never committed |
-| `GEMINI_MODEL_ID`, `OPENAI_MODEL_ID` | model names |
+| `GEMINI_MODEL_ID`, `OPENAI_MODEL_ID`, `GROQ_MODEL_ID` | model names |
+| `GROQ_API_KEYS`, `GROQ_API_KEY` | Groq keys; with several, a rate-limited key hands the request to the next |
 | `AGENT_TIMEOUT_S` | per-call limit for the agent's own model calls (default 6; perception uses `PERCEPTION_TIMEOUT_S`, default 10) |
 | `PERCEPTION_TIMEOUT_S` | per-call limit for `read_photo` and `transcribe` (default 10) |
 | `VOICE_PROVIDER` | `sarvam` or `gemini`; default Sarvam when a real `SARVAM_API_KEY` is set, else Gemini |
@@ -179,6 +181,12 @@ curl -i -H 'X-Principal: br-1' 'localhost:3000/receipts?collector_id=kw-raju'
 To list a Brand's own Certificates first: `curl -H 'X-Principal: br-1' 'localhost:3000/certificates?brand_id=br-1'`. Without a seeded database, the same two calls are exercised offline by `MOCK_LLM=1 python -m pytest -q tests/test_api.py tests/test_policy.py tests/test_docs.py`.
 
 Show the red "Denied by Cedar policy" banner in the console (P4) over the same 403, then cut to `src/policy/policies.cedar` (`kabadiwala-own-data` and `brand-own-certificates`) for two seconds. Say: "Default deny. A brand can verify its plastic's origin, never the Kabadiwala's identity."
+
+### Red-team scorecard (about 10 s, after beat 4)
+
+`make redteam` runs 47 attacks against the real code: lying at the scale, prompt injection, a **compromised model** that does whatever an attacker wants inside the real Strands loop, Cedar access attempts, ledger rewrites and radar evasion. It also runs 3 honest controls that must still pass, and shows 3 known limits that get through, each with what would catch it. Each attack gets its own fresh ledger; whether the attacker won is decided from facts (HTTP status, ledger rows, `/verify`, Flags), never from model text. Code: `src/agent/redteam.py`. Committed result: `docs/redteam_scorecard.md` (a test fails if it goes stale).
+
+Show the terminal table scrolling, then hold on the headline and the *Compromised model* rows. Say: "We attacked our own system 47 ways. Even if the model is fully hijacked, it can't write a wrong Receipt." `python -m agent.redteam --real` runs the scale and injection rows against the real model; use it for the clip if a key is set.
 
 ## 7. Known limitations
 
