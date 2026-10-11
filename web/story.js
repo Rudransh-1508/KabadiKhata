@@ -116,29 +116,24 @@
     copy.style.transform = `translateY(calc(-50% + ${(1 - span(t, 0.15, 0.3)) * 24}px))`;
   }
 
-  // ---------- 2. bundle ----------
-  const sheets = [...story.querySelectorAll(".bundle .sheet")];
+  // ---------- 2. bundle of raddi (photo); if img/raddi-untied.jpg exists the rope comes off ----------
+  const HEADLINE = { x: 0.395, y: 0.29 };
   function bundle(t) {
-    const untie = io(span(t, 0.08, 0.42)), fan = io(span(t, 0.38, 0.7)), zoom = io(span(t, 0.68, 1));
-    $("bundle").style.transform = `scale(${0.7 + 0.3 * ease(span(t, 0, 0.15))}) rotate(${-4 + 4 * untie}deg)`;
-    $("rope-v").style.transform = `translateY(${-untie * 120}%) rotate(${untie * 25}deg)`;
-    $("rope-h").style.transform = `translateX(${untie * 120}%) rotate(${-untie * 15}deg)`;
-    $("rope-v").style.opacity = $("rope-h").style.opacity = $("knot").style.opacity = 1 - untie;
-    $("knot").style.transform = `scale(${1 - untie * 0.6}) translateY(${untie * -80}px)`;
-    sheets.forEach((s, i) => {
-      if (s.classList.contains("top")) return;
-      const k = i - 3;
-      s.style.transform = `translate(${k * fan * 70}px, ${Math.abs(k) * fan * 18 - i * 3 * (1 - fan)}px) rotate(${k * fan * 9}deg)`;
-      s.style.opacity = 1 - zoom;
-    });
-    $("topsheet").style.transform = `translateY(${-fan * 30}px) scale(${1 + zoom * 2.6})`;
-    $("topsheet").style.opacity = 1 - span(t, 0.92, 1);
+    const wrap = $("raddi"), W = wrap.offsetWidth, H = wrap.offsetHeight;
+    const settle = ease(span(t, 0, 0.2)), z = io(span(t, 0.45, 1));
+    const sc = (1.12 - 0.12 * settle) * (1 + z * 1.6);
+    const fx = 0.5 + (HEADLINE.x - 0.5) * z, fy = 0.5 + (HEADLINE.y - 0.5) * z;
+    wrap.style.transform = `translate(${-sc * W * fx}px, ${-sc * H * fy}px) scale(${sc})`;
+    const untied = $("untied");
+    if (untied) untied.style.opacity = io(span(t, 0.22, 0.42));
   }
 
   // ---------- 3-4. clippings ----------
+  // the camera drifts over the paper: a slow push-in with a slight tilt
+  const cam = (t, tilt) => `rotateX(${7 - 3 * t}deg) rotateZ(${tilt}deg) scale(${1.0 + 0.07 * t}) translate(${-1.5 * t}vw, ${-1 * t}vh)`;
   function clip1(t) {
     const art = LAYERS.clip1.querySelector(".clipping");
-    art.style.transform = `scale(${1.08 - 0.08 * ease(span(t, 0, 0.2))})`;
+    art.style.transform = cam(t, -1.6);
     $("hl1").style.setProperty("--hl", `${io(span(t, 0.12, 0.45)) * 100}%`);
     const z = io(span(t, 0.5, 0.85));
     art.style.filter = `blur(${z * 4}px) brightness(${1 - z * 0.45})`;
@@ -149,27 +144,33 @@
   function clip2(t) {
     const art = LAYERS.clip2.querySelector(".clipping");
     const k = ease(span(t, 0, 0.3));
-    art.style.transform = `translateX(${(1 - k) * 60}vw) rotate(${-1.2 - (1 - k) * 6}deg)`;
+    art.style.transform = `translateX(${(1 - k) * 70}vw) ${cam(t, 1.4 - (1 - k) * 6)}`;
     $("hl2").style.setProperty("--hl", `${io(span(t, 0.3, 0.7)) * 100}%`);
   }
 
-  // ---------- 5. her ----------
-  const EYE = { x: 0.44, y: 0.716 };      // her right eye in the image, as fractions of width and height
+  // ---------- 5. her: zoom into the full photo, crossfade into the close-up lined up on her face, then into the teary eye ----------
+  const FULL = { mid: { x: 0.507, y: 0.716 }, eyes: 0.134 };          // eye midpoint and eye distance, as fractions of the full photo
+  const CLOSE = { mid: { x: 0.513, y: 0.381 }, eyes: 0.418, eye: { x: 0.728, y: 0.405 } };
+  function place(el, s, fx, fy, dx = 0, dy = 0) {
+    el.style.transform = `translate(${dx - s * el.offsetWidth * fx}px, ${dy - s * el.offsetHeight * fy}px) scale(${s})`;
+  }
   function her(t) {
-    const wrap = $("photo"), W = wrap.offsetWidth, H = wrap.offsetHeight;
-    const appear = ease(span(t, 0, 0.1));
-    const z = io(span(t, 0.36, 0.8));       // zoom into the eye
-    const s = 1 + z * 4.4;
-    const fx = 0.5 + (EYE.x - 0.5) * z, fy = 0.5 + (EYE.y - 0.5) * z;
-    const shift = (1 - z) * Math.min(innerWidth * 0.17, 260) * (innerWidth > 760 ? 1 : 0);   // photo sits right of the text first
-    wrap.style.transform = `translate(${shift - s * W * fx}px, ${-s * H * fy + (1 - appear) * 40}px) scale(${s})`;
-    wrap.style.opacity = appear;
-    $("her1").style.opacity = span(t, 0.06, 0.16) * (1 - span(t, 0.3, 0.38));
-    const tear = span(t, 0.74, 0.98);
-    $("glint").style.opacity = span(t, 0.66, 0.8) * 0.9;
-    $("tear").style.opacity = Math.min(1, tear * 3);
-    $("tear").style.transform = `translateY(${tear * 260}%)`;
-    $("her2").style.opacity = span(t, 0.82, 0.92);
+    const p1 = $("photo"), p2 = $("photo2");
+    const appear = ease(span(t, 0, 0.08));
+    const zA = io(span(t, 0.18, 0.5));                                   // full photo -> her face
+    const sA = 1 + zA * 4.2;
+    const shift = (1 - zA) * Math.min(innerWidth * 0.17, 260) * (innerWidth > 760 ? 1 : 0);
+    place(p1, sA, 0.5 + (FULL.mid.x - 0.5) * zA, 0.5 + (FULL.mid.y - 0.5) * zA, shift, (1 - appear) * 40);
+    // close-up scaled so its eyes sit exactly where the full photo's eyes are on screen
+    const match = (sA * FULL.eyes * p1.offsetWidth) / (CLOSE.eyes * p2.offsetWidth);
+    const zB = io(span(t, 0.52, 0.82));                                  // close-up -> the teary eye
+    const sB = match * (1 + zB * 5.6);
+    place(p2, sB, CLOSE.mid.x + (CLOSE.eye.x - CLOSE.mid.x) * zB, CLOSE.mid.y + (CLOSE.eye.y - CLOSE.mid.y) * zB);
+    const x = span(t, 0.42, 0.52);
+    p1.style.opacity = appear * (1 - x);
+    p2.style.opacity = x;
+    $("her1").style.opacity = span(t, 0.05, 0.12) * (1 - span(t, 0.2, 0.28));
+    $("her2").style.opacity = span(t, 0.82, 0.9);
   }
 
   function cta(t) {

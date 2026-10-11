@@ -91,7 +91,7 @@
   function drawPile(w, h) {
     const mk = () => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c.getContext("2d"); };
     const g = mk(), ix = mk();
-    g.fillStyle = "rgb(22, 30, 28)"; g.fillRect(0, 0, w, h);
+    g.fillStyle = "rgb(12, 17, 25)"; g.fillRect(0, 0, w, h);
     ix.fillStyle = "rgb(0,0,0)"; ix.fillRect(0, 0, w, h);
     const len0 = Math.max(70, Math.min(w, h) * 0.22);
     const n = Math.round((w * h) / (len0 * len0 * 0.42));

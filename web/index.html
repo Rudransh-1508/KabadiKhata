@@ -47,14 +47,13 @@
         </div>
       </div>
 
-      <!-- 2. a tied bundle of newspaper; the rope comes off and the sheets fan out -->
+      <!-- 2. a tied bundle of raddi (photo) -->
       <div class="layer" id="sc-bundle" aria-hidden="true">
-        <div class="bundle" id="bundle">
-          <div class="sheet"></div><div class="sheet"></div><div class="sheet"></div><div class="sheet"></div>
-          <div class="sheet"></div><div class="sheet"></div><div class="sheet"></div>
-          <div class="sheet top" id="topsheet"><span class="mast">रद्दी</span><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="rope v" id="rope-v"></div><div class="rope h" id="rope-h"></div><div class="knot" id="knot"></div>
+        <div class="raddi" id="raddi">
+          <img src="img/raddi.jpg" alt="">
+          <img src="img/raddi-untied.jpg" alt="" class="untied" id="untied" onerror="this.remove()">
         </div>
+        <span class="ai-label">AI-generated image</span>
       </div>
 
       <!-- 3. clipping one -->
@@ -65,6 +64,7 @@
           <p class="clip-p"><mark id="hl1">In 2024, the NGT took up CPCB's finding of 6 lakh fake recycling (EPR) certificates from four plastic recyclers.</mark></p>
           <p class="clip-src">Source: SCC Online, 31 July 2024 (NGT notice to CPCB and MoEFCC)</p>
         </article>
+        <div class="dof" aria-hidden="true"></div>
         <div class="big-red" id="big1">6,00,000</div>
       </div>
 
@@ -76,24 +76,25 @@
           <p class="clip-p">Kabadiwalas <mark id="hl2">deal in cash, with no paper or GST trail</mark>, and experts want them recognised as collection agents.</p>
           <p class="clip-src">Paraphrased from Mongabay India, May 2026</p>
         </article>
+        <div class="dof" aria-hidden="true"></div>
       </div>
 
       <!-- 5. her -->
       <div class="layer" id="sc-her">
-        <div class="photo-wrap" id="photo">
-          <img src="img/kabadiwala.jpg" alt="An elderly woman carrying a tied bundle of newspapers on her head (AI-generated image)" id="herimg">
-          <span class="tear" id="tear" aria-hidden="true"></span>
-          <span class="glint" id="glint" aria-hidden="true"></span>
-        </div>
+        <div class="photo-wrap" id="photo"><img src="img/kabadiwala.jpg" alt="An elderly woman carrying a tied bundle of newspapers on her head (AI-generated image)"></div>
+        <div class="photo-wrap close" id="photo2"><img src="img/kabadiwala-close.jpg" alt="Close-up of her face, eyes full of tears (AI-generated image)"></div>
         <div class="grain" aria-hidden="true"></div>
         <div class="her-copy" id="her1">
           <span class="eyebrow">This is who carries it</span>
-          <h2 class="news-h">She is paid by the kilo, in cash.</h2>
-          <p>No receipt for what she brings in, so no proof of what she earns. No bank can see her work, and new rules shut out collectors who are not on record.</p>
+          <h2 class="news-h">Every bundle of raddi passes through hands like hers.</h2>
         </div>
         <div class="her-copy end" id="her2">
-          <h2 class="news-h">Lakhs of kabadiwalas like her keep India's recycling running.</h2>
-          <p>Not one kilo of it is on paper.</p>
+          <h2 class="news-h">She is paid by the kilo, in cash. Nothing is written down.</h2>
+          <ul>
+            <li>No receipt, so no proof of what she earns, and no bank can see her work.</li>
+            <li>The 2026 waste rules bar working with collectors who are not registered.</li>
+            <li>Lakhs of kabadiwalas like her keep India's recycling running, and not one kilo of it is on paper.</li>
+          </ul>
         </div>
         <span class="ai-label">AI-generated image</span>
       </div>
