@@ -1,17 +1,22 @@
 """User-facing copy for the Kabadi Khata bot.
 
-Primary language: **Hinglish** (romanized Hindi) — team decision, because it is
-easier for low-literacy phone users to read than Devanagari. English is kept
-alongside for the README, the demo and an easy toggle.
+Three languages, chosen per user at /start (a contextvar carries the choice so
+the handlers don't pass it on every call):
+  - "hi"      = Hinglish (romanized Hindi) — the default, easiest for low-literacy
+                phone users to read.
+  - "hi_dev"  = Hindi in Devanagari (हिंदी).
+  - "en"      = English (README, demo, toggle).
 
 Usage:
-    from bot.strings_hi import t, MATERIAL_LABELS
-    t("welcome")                      # Hinglish (default)
-    t("hisaab_summary", today_kg=37)  # with formatting
-    t("welcome", lang="en")           # English
+    from bot.strings_hi import t, set_lang, MATERIAL_LABELS
+    t("welcome")                      # current contextvar language (default Hinglish)
+    t("welcome", lang="en")           # explicit English
+    set_lang("hi_dev"); t("welcome")  # Devanagari Hindi
 """
+import contextvars
 
-LANG_DEFAULT = "hi"  # "hi" = Hinglish, "en" = English
+LANG_DEFAULT = "hi"            # "hi" = Hinglish, "hi_dev" = Devanagari Hindi, "en" = English
+LANGS = ("hi", "hi_dev", "en")
 
 HI = {
     "welcome": "Namaste! \U0001F64F Main *Kabadi Khata* hoon.\nAapke har collection ka pakka receipt banata hoon — bas photo kheencho, kaagaz-kaam main sambhal loonga.",
@@ -52,6 +57,49 @@ HI = {
     "cancelled": "Theek hai, cancel kar diya.",
     "demo_on": "Demo ON: agent taraazu par 12 kilo 'dekhega'. Alag weight daalo (jaise 20) to woh refuse karega.",
     "demo_off": "Demo OFF. Ab asli photo se collection hoga.",
+    "choose_language": "Bhasha chuno:",
+}
+
+HI_DEV = {
+    "welcome": "नमस्ते! \U0001F64F मैं *कबाड़ी खाता* हूँ।\nआपके हर कलेक्शन की पक्की रसीद बनाता हूँ — बस फ़ोटो खींचो, कागज़-काम मैं संभाल लूँगा।",
+    "ask_name": "पहले अपना नाम बताओ।",
+    "name_saved": "ठीक है {name} जी! ✅",
+    "ask_locality": "आप किस इलाके में काम करते हो? नीचे से चुनो \U0001F447",
+    "locality_saved": "{locality} सेट हो गया। ✅",
+    "send_photo": "अब तराज़ू (स्केल) और माल की एक फ़ोटो भेजो \U0001F4F7",
+    "after_photo": "बढ़िया! अब माल का टाइप और वज़न बताओ —\nबटन दबाओ, या वॉइस नोट भेजो \U0001F3A4",
+    "choose_material": "माल कौन सा है?",
+    "enter_weight": "कितने किलो? नंबर दबाओ।",
+    "weight_prompt": "वज़न (किलो): {kg}",
+    "processing": "एक सेकंड... चेक कर रहा हूँ ✅",
+    "receipt_ready": "रसीद तैयार! ✅ ये रहा आपका पक्का हिसाब।",
+    "question_prefix": "\U0001F914 ",
+    "answer_hint": "सही जवाब बटन से चुनो या दोबारा बताओ।",
+    "hisaab_button": "\U0001F4CA मेरा हिसाब",
+    "hisaab_summary": (
+        "\U0001F4CA *मेरा हिसाब* — {name}\n\n"
+        "आज: {today_kg} किलो • ₹{today_inr}\n"
+        "इस महीने: {month_kg} किलो • ₹{month_inr}\n"
+        "कुल रसीदें: {count}\n"
+        "✅ चेन वेरिफाइड"
+    ),
+    "help": "फ़ोटो भेजो → माल का टाइप और किलो बताओ → रसीद मिलेगी। /hisaab से अपना टोटल देखो।",
+    "error_generic": "अरे, कुछ गड़बड़ हो गई। दोबारा कोशिश करो। \U0001F647",
+    "synthetic_notice": "(डेमो डेटा — असली कलेक्शन नहीं)",
+    "btn_voice": "\U0001F3A4 वॉइस नोट",
+    "btn_tap": "⌨️ बटन से बताओ",
+    "btn_yes": "हाँ",
+    "btn_no": "नहीं",
+    "btn_confirm": "पक्का ✅",
+    "btn_cancel": "कैंसिल",
+    "btn_retry": "दोबारा बताओ",
+    "need_start": "पहले /start करके नाम और इलाका सेट करो।",
+    "voice_soon": "वॉइस सपोर्ट आ रहा है — अभी बटन से बताओ।",
+    "bad_weight": "वज़न ठीक नहीं लगा। दोबारा डालो (0–500 किलो)।",
+    "cancelled": "ठीक है, कैंसिल कर दिया।",
+    "demo_on": "डेमो ऑन: एजेंट तराज़ू पर 12 किलो 'देखेगा'। अलग वज़न डालो (जैसे 20) तो वो मना कर देगा।",
+    "demo_off": "डेमो ऑफ। अब असली फ़ोटो से कलेक्शन होगा।",
+    "choose_language": "भाषा चुनें:",
 }
 
 EN = {
@@ -93,39 +141,59 @@ EN = {
     "cancelled": "Okay, cancelled.",
     "demo_on": "Demo ON: the agent will 'see' 12 kg on the scale. Enter a different weight (e.g. 20) to make it refuse.",
     "demo_off": "Demo OFF. Collections now use the real photo.",
+    "choose_language": "Choose your language:",
 }
 
-# Material labels shown on the tap-button grid (Hinglish primary).
+_TABLES = {"hi": HI, "hi_dev": HI_DEV, "en": EN}
+
+# Material labels shown on the tap-button grid.
 MATERIAL_LABELS = {
-    "PET":           {"hi": "Plastic bottle", "en": "Plastic bottle (PET)"},
-    "HDPE":          {"hi": "Hard plastic",   "en": "Hard plastic (HDPE)"},
-    "LDPE_film":     {"hi": "Polythene/film", "en": "Polythene / film"},
-    "mixed_plastic": {"hi": "Mixed plastic",  "en": "Mixed plastic"},
-    "cardboard":     {"hi": "Gatta/carton",   "en": "Cardboard / carton"},
-    "paper":         {"hi": "Raddi/kaagaz",   "en": "Paper / newspaper"},
-    "metal":         {"hi": "Loha/metal",     "en": "Metal"},
-    "ewaste":        {"hi": "E-waste",        "en": "E-waste"},
-    "unknown":       {"hi": "Pata nahi",      "en": "Unknown"},
+    "PET":           {"hi": "Plastic bottle", "hi_dev": "प्लास्टिक बोतल",   "en": "Plastic bottle (PET)"},
+    "HDPE":          {"hi": "Hard plastic",   "hi_dev": "सख्त प्लास्टिक",    "en": "Hard plastic (HDPE)"},
+    "LDPE_film":     {"hi": "Polythene/film", "hi_dev": "पॉलीथीन/फिल्म",    "en": "Polythene / film"},
+    "mixed_plastic": {"hi": "Mixed plastic",  "hi_dev": "मिक्स प्लास्टिक",   "en": "Mixed plastic"},
+    "cardboard":     {"hi": "Gatta/carton",   "hi_dev": "गत्ता/कार्टन",      "en": "Cardboard / carton"},
+    "paper":         {"hi": "Raddi/kaagaz",   "hi_dev": "रद्दी/कागज़",       "en": "Paper / newspaper"},
+    "metal":         {"hi": "Loha/metal",     "hi_dev": "लोहा/मेटल",         "en": "Metal"},
+    "ewaste":        {"hi": "E-waste",        "hi_dev": "ई-कचरा",            "en": "E-waste"},
+    "unknown":       {"hi": "Pata nahi",      "hi_dev": "पता नहीं",          "en": "Unknown"},
 }
 
 # Material order for the button grid.
 MATERIAL_ORDER = ["PET", "HDPE", "LDPE_film", "mixed_plastic", "cardboard", "paper", "metal", "ewaste"]
 
+# Per-task current language (set from the user's choice; isolated per async handler).
+_current_lang = contextvars.ContextVar("kk_lang", default=LANG_DEFAULT)
 
-def t(key: str, lang: str = LANG_DEFAULT, **kwargs) -> str:
+
+def set_lang(lang: str) -> None:
+    """Set the current task's language (ignores an unknown code, keeping the default)."""
+    _current_lang.set(lang if lang in LANGS else LANG_DEFAULT)
+
+
+def current_lang() -> str:
+    return _current_lang.get()
+
+
+def t(key: str, lang: str | None = None, **kwargs) -> str:
     """Return a string by key in the chosen language, formatted with kwargs.
 
-    Falls back to English, then to the key itself, so a missing key never crashes the bot.
+    ``lang=None`` uses the current contextvar language. Falls back to English, then
+    to the key itself, so a missing key never crashes the bot.
     """
-    table = HI if lang == "hi" else EN
+    if lang is None:
+        lang = _current_lang.get()
+    table = _TABLES.get(lang, HI)
     s = table.get(key)
     if s is None:
         s = EN.get(key, key)
     return s.format(**kwargs) if kwargs else s
 
 
-def material_label(material: str, lang: str = LANG_DEFAULT) -> str:
-    """Hinglish/English display label for a material code; falls back to the code."""
+def material_label(material: str, lang: str | None = None) -> str:
+    """Display label for a material code in the chosen language; falls back to the code."""
+    if lang is None:
+        lang = _current_lang.get()
     entry = MATERIAL_LABELS.get(material)
     if entry is None:
         return material
