@@ -127,7 +127,7 @@ writes nothing. A misread photo costs a question, not a false Receipt.
 - **Vision:** [Groq](https://groq.com) serving `qwen/qwen3.8-27b` reads the scale photo, with Google Gemini (`gemini-flash-latest`, via the `google-genai` SDK) as the fallback; OpenAI and xAI Grok are optional further fallbacks. Gemini is also the fallback transcriber.
 
 ## Team
-**Sparsh** — P4 Product/UX & Story. **Rudransh**, **Vanshika**, **Aarushi** — P1 ML/Perception, P2 Agent & Policy, P3 Backend & Data. _[team: confirm which of Rudransh / Vanshika / Aarushi is P1 / P2 / P3.]_
+**Vanshika** — P1 ML/Perception · **Aarushi** — P2 Agent & Policy · **Rudransh** — P3 Backend & Data · **Sparsh** — P4 Product/UX & Story.
 
 ## Background research
 See [`research/00_SHORTLIST.md`](research/00_SHORTLIST.md) for the candidate ideas scored against the judging criteria, and `research/01`–`04` for problem statements, past winners, Delhi pain points, and the data/stack reality check.
