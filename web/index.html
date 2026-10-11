@@ -120,7 +120,7 @@
 <script src="mosaic.js"></script>
 <script src="story.js"></script>
 <script>
-// Live numbers from the API when served by web/server.py; the static figures above stay if it is unreachable.
+// Live numbers from the API when served by web/server.py. The figures above are the seeded world's, shown only without an API (static preview).
 (async function () {
   const get = (p, who) => fetch("/api" + p, { headers: { "X-Principal": who } }).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
   try {
@@ -128,8 +128,7 @@
     const chains = await Promise.all(kws.map((k) => get("/receipts?collector_id=" + encodeURIComponent(k.actor_id), "au-1")));
     const n = chains.reduce((s, c) => s + c.receipts.length, 0);
     const set = (k, v) => { const el = document.querySelector(`[data-k="${k}"]`); if (el) el.textContent = v.toLocaleString("en-IN"); };
-    set("receipts", n); set("kabadiwalas", kws.length);
-    if (flags.length) set("flags", flags.length);
+    set("receipts", n); set("kabadiwalas", kws.length); set("flags", flags.length);   // 0 is a real answer too
   } catch (e) { /* static preview: keep the seeded figures */ }
 })();
 </script>
