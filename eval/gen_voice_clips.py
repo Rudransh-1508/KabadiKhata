@@ -3,6 +3,11 @@
     uv run python eval/gen_voice_clips.py               # Gemini TTS, 6 voices (needs GEMINI_API_KEY)
     uv run python eval/gen_voice_clips.py --engine say  # macOS "Lekha" Hindi voice: offline, no quota
     uv run python eval/gen_voice_clips.py --engine sarvam  # Sarvam Bulbul, 6 Indian voices (needs SARVAM_API_KEY)
+    uv run python eval/gen_voice_clips.py --engine clone   # Sarvam voice clone of the team's real voice notes
+
+`--engine clone` first converts the uploaded real voice notes (data/eval_voice/uploads/real_XX.mp4)
+to data/eval_voice/real/real_XX.wav, then joins them into one reference clip and has Sarvam's
+voice cloning speak the `clone` rows in that voice. The clones are Synthetic, scored apart from `real`.
 
 The Gemini free tier allows only a few TTS clips a day; the macOS voice has no limit. Each engine
 writes its own set (`tts`, `say`, `sarvam` -> data/eval_voice/<set>/), scored apart.
@@ -31,6 +36,10 @@ SAY_VOICE = "Lekha"
 SARVAM_OUT = Path("data/eval_voice/sarvam")
 SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech"
 SARVAM_TTS_MODEL = os.getenv("SARVAM_TTS_MODEL_ID", "bulbul:v3")
+CLONE_OUT = Path("data/eval_voice/clone")
+REAL_OUT = Path("data/eval_voice/real")
+UPLOADS = Path("data/eval_voice/uploads")
+SARVAM_CLONE_URL = "https://api.sarvam.ai/voices/clone"
 SARVAM_SPEAKERS = ("shubh", "ritu", "aditya", "priya", "rahul", "neha")
 MODEL = os.getenv("GEMINI_TTS_MODEL_ID", "gemini-2.5-flash-preview-tts")
 PAUSE_S = float(os.getenv("TTS_PAUSE_S", "7"))
@@ -134,10 +143,79 @@ def sarvam_main() -> int:
     return 0
 
 
+def _sarvam_key() -> str:
+    load_env()
+    key = os.getenv("SARVAM_API_KEY", "")
+    return "" if key.startswith("your-") else key
+
+
+def import_uploads(rows: list[dict]) -> list[dict]:
+    """The `real` rows whose upload exists, converted to 16 kHz mono WAV like the bot sends."""
+    REAL_OUT.mkdir(parents=True, exist_ok=True)
+    found = []
+    for r in rows:
+        if r["set"] != "real":
+            continue
+        wav = REAL_OUT / r["file"]
+        src = UPLOADS / Path(r["file"]).with_suffix(".mp4").name
+        if not wav.exists() and src.exists():
+            subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src),
+                            "-ac", "1", "-ar", "16000", str(wav)], check=True)
+        if wav.exists():
+            found.append(r)
+    return found
+
+
+def clone_main() -> int:
+    """Sarvam voice cloning: one reference made of the real clips (<=15 s), then the `clone` rows."""
+    import base64
+
+    import httpx
+
+    key = _sarvam_key()
+    if not key:
+        print("Set SARVAM_API_KEY in .env first (dashboard.sarvam.ai).")
+        return 1
+    rows = list(csv.DictReader(LABELS.open(encoding="utf-8")))
+    real = import_uploads(rows)
+    if not real:
+        print(f"No real voice notes: put them in {UPLOADS} (real_XX.mp4) or record some with eval/record_voice.py.")
+        return 1
+    CLONE_OUT.mkdir(parents=True, exist_ok=True)
+    ref = CLONE_OUT / "_reference.wav"
+    inputs = [arg for r in real for arg in ("-i", str(REAL_OUT / r["file"]))]
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *inputs, "-filter_complex",
+                    f"concat=n={len(real)}:v=0:a=1", "-t", "15", "-ac", "1", "-ar", "16000", str(ref)], check=True)
+    ref_text = " ".join(r["speak_hi"] for r in real)
+    todo = [r for r in rows if r["set"] == "clone"]
+    for r in todo:
+        path = CLONE_OUT / r["file"]
+        if path.exists():
+            continue
+        with ref.open("rb") as fh:
+            resp = httpx.post(
+                SARVAM_CLONE_URL,
+                headers={"api-subscription-key": key},
+                data={"text": r["speak_hi"], "language_code": "hi-IN", "ref_text": ref_text,
+                      "output_audio_codec": "wav", "speech_sample_rate": "16000"},
+                files={"ref_audio": ("reference.wav", fh, "audio/wav")},
+                timeout=60,
+            )
+        if resp.status_code != 200:
+            print(f"{r['file']}: HTTP {resp.status_code}: {resp.text[:300]}")
+            return 1
+        path.write_bytes(base64.b64decode(resp.json()["audio"]))
+        print(f"{r['file']}: {r['speak_hi']}")
+    print(f"{len(todo)} clips in {CLONE_OUT} (voice cloned from {len(real)} real clips)")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--engine", choices=["gemini", "say", "sarvam"], default="gemini")
+    ap.add_argument("--engine", choices=["gemini", "say", "sarvam", "clone"], default="gemini")
     engine = ap.parse_args().engine
+    if engine == "clone":
+        return clone_main()
     if engine == "say":
         return say_main()
     if engine == "sarvam":
