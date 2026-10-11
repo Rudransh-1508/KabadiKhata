@@ -9,7 +9,7 @@ This only measures and reports similarity. Whether a look-alike pair becomes an 
 team decision (it would need a radar rule and a new Flag.rule value); it must never auto-refuse a
 Collection, because photos from one shop all look alike.
 
-Optional: needs `uv sync --extra dedupe` (onnxruntime, numpy). The model (88 MB, Apache-2.0,
+Optional: needs `uv sync --extra dev --extra product --extra dedupe` (onnxruntime, numpy). The model (88 MB, Apache-2.0,
 facebook/dinov2-small exported by onnx-community) downloads once into the cache, pinned to a
 revision and checked against its SHA-256.
 """
@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import io
 import os
+import shutil
 import urllib.request
 from functools import lru_cache
 from typing import Iterable, Optional
@@ -31,6 +32,7 @@ SIZE, CROP = 256, 224                       # resize the short side to 256, cent
 MEAN, STD = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
 # Where the pan or sack usually is in a kabadi scale photo (left, top, right, bottom as fractions).
 # Cropping to it keeps the shop's background, identical across that shop's photos, out of the match.
+# It assumes the framing of the AI-generated set; real phone photos framed differently need the load located first.
 LOAD_REGION = (0.2, 0.35, 0.8, 0.95)
 
 
@@ -48,19 +50,28 @@ def model_path() -> str:
     return os.path.join(config.cache_dir(), "models", "dinov2-small.onnx")
 
 
-def ensure_model() -> str:
-    """Download the model once; refuse a file whose hash doesn't match the pinned one."""
-    path = model_path()
-    if not os.path.exists(path):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        tmp = path + ".part"
-        urllib.request.urlretrieve(MODEL_URL, tmp)
-        os.replace(tmp, path)
+DOWNLOAD_TIMEOUT_S = 60
+
+
+def _sha256(path: str) -> str:
     with open(path, "rb") as fh:
-        digest = hashlib.sha256(fh.read()).hexdigest()
+        return hashlib.sha256(fh.read()).hexdigest()
+
+
+def ensure_model() -> str:
+    """Download the model once; a file whose hash doesn't match the pinned one never reaches `path`."""
+    path = model_path()
+    if os.path.exists(path):
+        return path
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".part"
+    with urllib.request.urlopen(MODEL_URL, timeout=DOWNLOAD_TIMEOUT_S) as resp, open(tmp, "wb") as fh:
+        shutil.copyfileobj(resp, fh)
+    digest = _sha256(tmp)
     if digest != MODEL_SHA256:
-        os.remove(path)
+        os.remove(tmp)
         raise RuntimeError(f"look-alike model hash mismatch ({digest[:12]}...); file removed, try again")
+    os.replace(tmp, path)
     return path
 
 
@@ -111,4 +122,4 @@ def similar_photos(photo: bytes, earlier: Iterable[tuple[str, object]], threshol
     v = embed(photo)
     hits = sorted(((pid, similarity(v, e)) for pid, e in earlier), key=lambda t: t[1], reverse=True)
     hits = [h for h in hits if h[1] >= threshold]
-    return hits[:limit] if limit else hits
+    return hits[:limit] if limit is not None else hits

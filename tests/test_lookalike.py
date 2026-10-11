@@ -37,17 +37,15 @@ def test_similar_photos_ranks_and_thresholds(monkeypatch):
     assert [h[0] for h in hits] == ["KK-A", "KK-C"]
     assert hits[0][1] > hits[1][1]
     assert lookalike.similar_photos(b"photo", earlier, threshold=0.9, limit=1)[0][0] == "KK-A"
+    assert lookalike.similar_photos(b"photo", earlier, threshold=0.9, limit=0) == []
 
 
 def test_a_model_file_with_the_wrong_hash_is_refused(monkeypatch):
-    def fake_download(url, path):
-        with open(path, "wb") as fh:
-            fh.write(b"not the model")
-
-    monkeypatch.setattr(lookalike.urllib.request, "urlretrieve", fake_download)
+    monkeypatch.setattr(lookalike.urllib.request, "urlopen", lambda url, timeout: io.BytesIO(b"not the model"))
     with pytest.raises(RuntimeError, match="hash mismatch"):
         lookalike.ensure_model()
-    assert not __import__("os").path.exists(lookalike.model_path())  # removed, so the next try re-downloads
+    assert not __import__("os").path.exists(lookalike.model_path())  # never moved into place
+    assert not __import__("os").path.exists(lookalike.model_path() + ".part")  # and the download is gone
 
 
 def test_model_is_pinned():
