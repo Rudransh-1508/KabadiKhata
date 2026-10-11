@@ -5,10 +5,10 @@
 
 **Proof of collection for India's informal recyclers, and a fraud radar for EPR certificates.**
 
-[![Environmental Hacks](https://img.shields.io/badge/Environmental_Hacks-Waste_%26_Energy-2c6a35?style=flat-square)](#)
-[![Build It](https://img.shields.io/badge/Build_It-runs_locally,_no_AWS_account-555?style=flat-square)](#getting-started)
-[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
-[![Strands Agents](https://img.shields.io/badge/AWS-Strands_Agents_·_Cedar_·_SAM-FF9900?style=flat-square)](#built-on-aws-open-source)
+<a href="#overview"><img src="docs/badges/hackathon.svg" alt="Environmental Hacks: Waste and Energy"></a>
+<a href="#getting-started"><img src="docs/badges/build-it.svg" alt="Build It: runs locally, no AWS account"></a>
+<a href="pyproject.toml"><img src="docs/badges/python.svg" alt="Python 3.12"></a>
+<a href="#built-on-aws-open-source"><img src="docs/badges/aws.svg" alt="AWS: Strands, Cedar, SAM"></a>
 
 [Overview](#overview) • [Features](#features) • [How it works](#how-it-works) • [Getting started](#getting-started) • [Evaluation](#evaluation) • [Limitations](#honesty-and-limitations) • [Credits](#credits-and-licences)
 
@@ -60,29 +60,210 @@ It serves three people (see [`docs/personas.md`](docs/personas.md)):
 
 ## How it works
 
-```
- Kabadiwala (Telegram bot)           Auditor / Brand (web console :8600, Streamlit :8501)
-        │ photo + taps or voice                     │
-        ▼                                           ▼
- ┌────────────────────── FastAPI (port 3000) ───────────────────────┐
- │ every request → policy.authz.is_allowed()  (Cedar)               │
- │                                                                  │
- │ POST /collections → Strands agent ── read_photo, transcribe,     │
- │                     (src/agent)       phash_check, consistency   │
- │                          │ create_receipt: only if consistent    │
- │                          ▼            and Cedar allows           │
- │                  ledger: hash-chained Receipts per Kabadiwala    │
- │                          │                                       │
- │ /radar/run ──────► radar: R1 mass balance · R2 duplicate photo   │
- │                          · R3 broken chain → Flags → auditor     │
- │ /certificates, /provenance → verified-backed % for brands        │
- └──────────────────────────┬───────────────────────────────────────┘
-                            ▼
-        SQLite ledger (data/kk.db) + data/photos/ ──copy──► OpenSearch
-                                                        (read-only search copy)
+### High-level design
+
+Three people, three front ends, one API. Every request passes Cedar before it touches data, and the ledger in SQLite is the only system of record.
+
+```mermaid
+flowchart LR
+    subgraph People
+        K["Kabadiwala<br/>(phone)"]
+        A["Auditor"]
+        B["Brand EPR officer"]
+    end
+
+    subgraph Front["Front ends"]
+        TG["Telegram bot<br/>bot/"]
+        WEB["Web console :8600<br/>web/"]
+        ST["Streamlit console :8501<br/>backup"]
+    end
+
+    subgraph API["FastAPI :3000 (src/api)"]
+        CEDAR{{"Cedar<br/>is_allowed()"}}
+        AGENT["Strands agent<br/>src/agent"]
+        LEDGER["Hash-chained ledger<br/>src/ledger"]
+        RADAR["Fraud radar<br/>R1 · R2 · R3"]
+        PROV["Provenance<br/>verified-backed %"]
+    end
+
+    subgraph Data["Storage"]
+        DB[("SQLite<br/>data/kk.db")]
+        PH[("Photos<br/>data/photos")]
+        OS[("OpenSearch<br/>read-only copy")]
+    end
+
+    subgraph Ext["Model APIs"]
+        LLM["Groq · Gemini · OpenAI<br/>vision + agent + explanations"]
+        STT["Sarvam<br/>speech-to-text"]
+    end
+
+    K --> TG --> CEDAR
+    A --> WEB
+    B --> WEB
+    A -.-> ST
+    WEB --> CEDAR
+    ST --> CEDAR
+    CEDAR --> AGENT --> LEDGER
+    CEDAR --> RADAR
+    CEDAR --> PROV
+    AGENT --> LLM
+    AGENT --> STT
+    RADAR -. explanation only .-> LLM
+    LEDGER --> DB
+    LEDGER --> PH
+    RADAR --> DB
+    PROV --> DB
+    DB -. copy .-> OS
 ```
 
-Three rules hold the design together:
+### Low-level design: one collection
+
+The agent picks the tools and phrases the reply; code decides the outcome. `create_receipt` is the only write tool, and it refuses unless the consistency check passed **and** Cedar allows `Agent::"kabadi-agent"` to write.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor K as Kabadiwala
+    participant Bot as Telegram bot
+    participant API as FastAPI
+    participant Cz as Cedar
+    participant Ag as Strands agent
+    participant M as Vision / speech models
+    participant L as Ledger (SQLite)
+
+    K->>Bot: photo + taps, or photo + Hindi voice note
+    Bot->>Bot: resize photo to ≤1024 px
+    Bot->>API: POST /collections (X-Principal: kabadiwala)
+    API->>Cz: create_collection on own chain?
+    Cz-->>API: allow
+    API->>Ag: handle_collection
+    Ag->>M: read_photo (scale reading, material)
+    opt voice note attached
+        Ag->>M: transcribe (stated weight, material)
+    end
+    Ag->>L: phash_check (duplicate photo?)
+    Ag->>Ag: check_consistency (code: ±10% kg, material group, confidence)
+    alt consistent
+        Ag->>Ag: quote_price (indicative rate card)
+        Ag->>Cz: may Agent::"kabadi-agent" create_receipt?
+        Cz-->>Ag: allow
+        Ag->>L: create_receipt: seq n, prev_hash = hash of n-1
+        API-->>Bot: status receipt
+        Bot-->>K: receipt card (QR, ₹, SYNTHETIC watermark)
+    else mismatch, duplicate or unreadable
+        API-->>Bot: status question, nothing written
+        Bot-->>K: one question in Hindi
+    end
+```
+
+If a model call fails or times out, the agent run stops and code finishes the collection deterministically, so the demo never depends on the model answering.
+
+### Low-level design: the fraud radar
+
+```mermaid
+flowchart TB
+    RUN["Auditor: Run the radar"] --> CZ{{"Cedar: is this an auditor?"}}
+    CZ --> V["Verify every chain (recompute hashes)"]
+    V --> VR["Verified receipts<br/>(a broken chain stops counting from the break)"]
+    subgraph Rules["Deterministic rules (src/radar/rules.py)"]
+        direction LR
+        R1["R1 mass balance<br/>certified ÷ (verified inflow × 0.85)<br/>flag above 1.17×"]
+        R2["R2 duplicate photo<br/>perceptual-hash clusters"]
+        R3["R3 broken chain<br/>first bad seq"]
+    end
+    VR --> R1
+    VR --> R2
+    V --> R3
+    R1 & R2 & R3 --> F["Flags: the verdict is fixed by code"]
+    F --> X["LLM writes the explanation (EN + HI)"]
+    X --> CHK{"Numbers match the facts<br/>and the synthetic label is there?"}
+    CHK -- yes --> OUT["Flag shows the LLM text"]
+    CHK -- no --> TPL["Flag shows the template text"]
+    OUT & TPL --> DEC["Auditor decides: inspect or dismiss"]
+```
+
+### Data model
+
+```mermaid
+erDiagram
+    ACTORS ||--o{ RECEIPTS : "collects (collector_id)"
+    ACTORS ||--o{ CERTIFICATES : "buys (brand_id)"
+    RECEIPTS }o--o| ACTORS : "sold to recycler (recycler_id)"
+    CERTIFICATES }o--|| ACTORS : "issued by recycler"
+    RECEIPTS ||--o| RECEIPTS : "prev_hash links seq n to n-1"
+
+    ACTORS {
+        text actor_id PK
+        text role "kabadiwala, recycler, brand, auditor"
+        text name
+        text locality
+    }
+    RECEIPTS {
+        text collector_id PK
+        int seq PK
+        text receipt_id "derived from hash"
+        text material
+        real weight_kg
+        real price_inr_per_kg
+        text ts "UTC ISO"
+        text photo_sha256
+        text phash
+        text evidence "photo, claim, consistency"
+        int synthetic
+        text prev_hash "GENESIS for seq 0"
+        text hash "sha256 of canonical JSON"
+    }
+    CERTIFICATES {
+        text certificate_id PK
+        text recycler_id
+        text brand_id
+        text month
+        text material
+        real tonnes
+    }
+    FLAGS {
+        text flag_id PK
+        text rule "R1, R2, R3"
+        text subject_id
+        real score
+        text evidence_ids
+        text explanation_en
+        text explanation_hi
+        text status "open, inspection_requested, dismissed"
+        text decided_by
+    }
+```
+
+### Runtime and build artifacts
+
+`make demo` runs every process locally from the `Procfile`:
+
+```mermaid
+flowchart LR
+    SEED["make seed<br/>data/synth/world.json → data/kk.db"] --> API2
+    subgraph Local["make demo (honcho, one terminal)"]
+        direction LR
+        BOT2["bot<br/>python -m bot.telegram_bot<br/>long-polls Telegram"]
+        WEB2["web :8600<br/>uvicorn web.server:app<br/>forwards /api/*"]
+        ST2["console :8501<br/>streamlit run console/app.py"]
+        API2["api :3000<br/>uvicorn api.app:app"]
+        BOT2 --> API2
+        WEB2 --> API2
+        ST2 --> API2
+    end
+```
+
+`make sam-invoke` packages the same API as an arm64 Lambda for the "Built on AWS" clip:
+
+```mermaid
+flowchart LR
+    DEPS["make lambda-deps<br/>uv export → arm64 wheels,<br/>installed on the host"] --> LAYER["Lambda layer<br/>.aws-sam-deps/layer"]
+    CODE["CodeUri: src<br/>api.lambda_entry.handler"] --> FN["KabadiKhataApi<br/>python3.12 · arm64<br/>60 s · 1024 MB"]
+    LAYER --> FN
+    FN --> INV["sam local invoke<br/>a receipt written,<br/>a Cedar denial"]
+```
+
+### Design rules
 
 1. **Code decides, the human approves, the LLM explains.** No model ever decides a verdict or a receipt.
 2. **The agent has exactly one write tool,** `create_receipt`, and it refuses unless the consistency check passed **and** Cedar allows it.
