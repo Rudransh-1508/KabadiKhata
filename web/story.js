@@ -102,18 +102,19 @@
   function scrap(t) {
     const W = innerWidth, H = innerHeight, cx = W * 0.7, cy = H * 0.5;
     const through = io(span(t, 0.72, 1));           // the camera flies through the cloud at the end
+    const tt = 0.42 + 0.58 * t;                     // start mid-flight, so the first frame is never an empty screen
     for (const it of items) {
-      const k = ease(span(t, it.delay * 0.5, 0.55 + it.delay * 0.5));
+      const k = ease(span(tt, it.delay * 0.5, 0.55 + it.delay * 0.5));
       let x = it.sx + (it.hx - it.sx) * k, y = it.sy + (it.hy - it.sy) * k;
       x = cx + (x - cx) * (1 + through * 2.2); y = cy + (y - cy) * (1 + through * 2.2);
-      const sc = it.s * (0.55 + 0.45 * k + 0.25 * span(t, 0.4, 0.72)) * (1 + through * 3.5);
-      const rot = it.r0 + (it.r1 - it.r0) * k + t * 0.6;
+      const sc = it.s * (0.55 + 0.45 * k + 0.25 * span(tt, 0.4, 0.72)) * (1 + through * 3.5);
+      const rot = it.r0 + (it.r1 - it.r0) * k + tt * 0.6;
       it.c.style.transform = `translate(${x - it.w / 2}px, ${y - it.h / 2}px) rotate(${rot}rad) scale(${sc})`;
       it.c.style.opacity = 1 - through;
     }
     const copy = story.querySelector(".scrap-copy");
-    copy.style.opacity = span(t, 0.15, 0.3) * (1 - span(t, 0.75, 0.9));
-    copy.style.transform = `translateY(calc(-50% + ${(1 - span(t, 0.15, 0.3)) * 24}px))`;
+    copy.style.opacity = 1 - span(t, 0.75, 0.9);
+    copy.style.transform = "translateY(-50%)";
   }
 
   // ---------- 2. bundle of raddi (photo); if img/raddi-untied.jpg exists the rope comes off ----------
